@@ -517,6 +517,134 @@
             opacity: 0.5;
         }
 
+        .tab-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #2a2a3e;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: #b0b0b0;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            color: #e0e0e0;
+            background: #1a2332;
+        }
+
+        .tab-btn.active {
+            color: #4a90e2;
+            border-bottom-color: #4a90e2;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .notification-item {
+            background: #1a2332;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4a90e2;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .notification-item.warning {
+            border-left-color: #ffc107;
+        }
+
+        .notification-item.error {
+            border-left-color: #dc3545;
+        }
+
+        .notification-item.success {
+            border-left-color: #28a745;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-message {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .notification-time {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .notification-delete {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+        }
+
+        .notification-delete:hover {
+            color: #ff4444;
+        }
+
+        .empty-notifications {
+            text-align: center;
+            color: #6c757d;
+            padding: 60px 20px;
+        }
+
+        .pending-approval {
+            background: #2a2a1a;
+            border: 2px solid #ffc107;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .pending-approval-text {
+            color: #ffc107;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .pending-approval-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .pending-approval-actions button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         .credits {
             text-align: center;
             padding: 20px;
@@ -550,6 +678,12 @@
             <div class="session-role" id="sessionRole"></div>
         </div>
 
+        <!-- Tab Navigation -->
+        <div id="tabNavigation" class="tab-navigation hidden">
+            <button class="tab-btn active" id="mainTab">Ana Sayfa</button>
+            <button class="tab-btn" id="notificationsTab">Bildirimler <span class="notification-badge hidden" id="notificationCount">0</span></button>
+        </div>
+
         <!-- Session Management (shown when not in a session) -->
         <div id="sessionManagement" class="session-buttons">
             <button class="btn-primary" id="createSessionBtn">Yeni Oturum</button>
@@ -558,6 +692,9 @@
 
         <!-- Main Content -->
         <div id="mainContent"></div>
+
+        <!-- Notifications Content -->
+        <div id="notificationsContent" class="hidden"></div>
     </div>
 
     <!-- Credits -->
@@ -864,7 +1001,8 @@
             drinks: {},
             drinkTypes: [],
             drinkHistory: {},
-            undoStack: []
+            undoStack: [],
+            notifications: []  // New: Persistent notifications
         };
 
         // Temporary data for session creation
@@ -878,6 +1016,11 @@
         const sessionCodeDisplay = document.getElementById('sessionCodeDisplay');
         const sessionRole = document.getElementById('sessionRole');
         const mainContent = document.getElementById('mainContent');
+        const notificationsContent = document.getElementById('notificationsContent');
+        const tabNavigation = document.getElementById('tabNavigation');
+        const mainTab = document.getElementById('mainTab');
+        const notificationsTab = document.getElementById('notificationsTab');
+        const notificationCount = document.getElementById('notificationCount');
 
         // Modal elements
         const createSessionModal = document.getElementById('createSessionModal');
@@ -925,6 +1068,112 @@
         // Initialize app
         initializeApp();
 
+        // Tab Navigation
+        mainTab.addEventListener('click', () => {
+            mainTab.classList.add('active');
+            notificationsTab.classList.remove('active');
+            mainContent.classList.remove('hidden');
+            notificationsContent.classList.add('hidden');
+        });
+
+        notificationsTab.addEventListener('click', () => {
+            notificationsTab.classList.add('active');
+            mainTab.classList.remove('active');
+            notificationsContent.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+            renderNotifications();
+        });
+
+        // Add notification to session
+        async function addNotification(message, type = 'info') {
+            const notification = {
+                id: Date.now(),
+                message: message,
+                type: type,
+                timestamp: Date.now()
+            };
+
+            const notifications = sessionData.notifications || [];
+            notifications.push(notification);
+
+            try {
+                await update(ref(database, `sessions/${currentSession}`), {
+                    notifications: notifications
+                });
+            } catch (error) {
+                console.error('Failed to add notification:', error);
+            }
+        }
+
+        // Render notifications
+        function renderNotifications() {
+            const notifications = sessionData.notifications || [];
+            
+            if (notifications.length === 0) {
+                notificationsContent.innerHTML = '<div class="empty-notifications">Henüz bildirim yok</div>';
+                return;
+            }
+
+            // Sort by timestamp, newest first
+            const sortedNotifications = [...notifications].sort((a, b) => b.timestamp - a.timestamp);
+
+            let html = '';
+            sortedNotifications.forEach(notification => {
+                const timeAgo = getTimeAgo(notification.timestamp);
+                html += `
+                    <div class="notification-item ${notification.type}">
+                        <div class="notification-content">
+                            <div class="notification-message">${notification.message}</div>
+                            <div class="notification-time">${timeAgo}</div>
+                        </div>
+                        ${isAdmin ? `<button class="notification-delete" onclick="window.deleteNotification(${notification.id})">✕</button>` : ''}
+                    </div>
+                `;
+            });
+
+            notificationsContent.innerHTML = html;
+        }
+
+        // Delete notification
+        window.deleteNotification = async function(notificationId) {
+            if (!isAdmin) return;
+
+            const notifications = (sessionData.notifications || []).filter(n => n.id !== notificationId);
+
+            try {
+                await update(ref(database, `sessions/${currentSession}`), {
+                    notifications: notifications
+                });
+            } catch (error) {
+                alert('Bildirim silinirken hata: ' + error.message);
+            }
+        };
+
+        // Get time ago string
+        function getTimeAgo(timestamp) {
+            const now = Date.now();
+            const diff = now - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (minutes < 1) return 'Az önce';
+            if (minutes < 60) return `${minutes} dakika önce`;
+            if (hours < 24) return `${hours} saat önce`;
+            return `${days} gün önce`;
+        }
+
+        // Update notification count badge
+        function updateNotificationCount() {
+            const count = (sessionData.notifications || []).length;
+            if (count > 0) {
+                notificationCount.textContent = count;
+                notificationCount.classList.remove('hidden');
+            } else {
+                notificationCount.classList.add('hidden');
+            }
+        }
+
         function initializeApp() {
             // Request notification permission on app load
             requestNotificationPermission();
@@ -939,12 +1188,15 @@
         function showSessionManagement() {
             sessionManagement.classList.remove('hidden');
             sessionInfo.classList.add('hidden');
+            tabNavigation.classList.add('hidden');
             mainContent.innerHTML = '';
+            notificationsContent.innerHTML = '';
         }
 
         function showSessionInfo() {
             sessionManagement.classList.add('hidden');
             sessionInfo.classList.remove('hidden');
+            tabNavigation.classList.remove('hidden');
             sessionCodeDisplay.textContent = currentSession;
             
             // Count active participants
@@ -959,6 +1211,8 @@
                 sessionRole.textContent = participantName;
                 sessionRole.className = 'session-role';
             }
+
+            updateNotificationCount();
         }
 
         // Create Session - Open Modal
@@ -1072,7 +1326,8 @@
                 drinks: {},
                 drinkTypes: [],
                 drinkHistory: {},
-                undoStack: []
+                undoStack: [],
+                notifications: []
             };
 
             try {
@@ -1209,6 +1464,8 @@
                     drinkTypes: data.drinkTypes || [],
                     drinkHistory: data.drinkHistory || {},
                     undoStack: data.undoStack || [],
+                    notifications: data.notifications || [],
+                    pendingDeletions: data.pendingDeletions || {},
                     adminCode: data.adminCode,
                     adminUserId: data.adminUserId,
                     createdAt: data.createdAt
@@ -1216,6 +1473,7 @@
                 
                 showSessionInfo();
                 renderMainContent();
+                updateNotificationCount();
             });
         }
 
@@ -1290,6 +1548,30 @@
                     </div>
                 `;
             });
+
+            // Pending deletion requests (admin only)
+            if (isAdmin) {
+                const pendingDeletions = sessionData.pendingDeletions || {};
+                const deletionEntries = Object.entries(pendingDeletions);
+                
+                if (deletionEntries.length > 0) {
+                    html += '<div style="margin-top: 20px;"><h3 style="color: #ffc107; margin-bottom: 10px;">Onay Bekleyen Silme İstekleri:</h3>';
+                    deletionEntries.forEach(([deleteId, deletion]) => {
+                        html += `
+                            <div class="pending-approval">
+                                <div class="pending-approval-text">
+                                    ${deletion.participantName} - ${deletion.drinkType} silmek istiyor
+                                </div>
+                                <div class="pending-approval-actions">
+                                    <button class="btn-success" onclick="window.approveDeletion('${deleteId}')">✓ Onayla</button>
+                                    <button class="btn-danger" onclick="window.rejectDeletion('${deleteId}')">✕ Reddet</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            }
 
             // Admin controls at bottom
             if (isAdmin) {
@@ -1525,6 +1807,11 @@
                     undoStack: updatedUndo
                 });
 
+                // Add notification
+                const addedBy = isAdmin ? 'Yönetici' : participant.name;
+                const notificationMessage = `${addedBy} ${participant.name === addedBy ? '' : `${participant.name} için `}${quantity} ${existingDrinkType} ekledi`;
+                await addNotification(notificationMessage, 'info');
+
                 addDrinkModal.classList.add('hidden');
                 pendingAction = null;
 
@@ -1649,10 +1936,41 @@
         });
 
         // Delete Drink
-        window.deleteDrink = function(participantId, drinkType) {
+        window.deleteDrink = async function(participantId, drinkType) {
             if (!isAdmin && participantId !== currentParticipantId) return;
 
             const participant = sessionData.participants[participantId];
+            
+            // If participant is deleting their own drink, request admin approval
+            if (!isAdmin && participantId === currentParticipantId) {
+                const message = `${participant.name}, ${drinkType} silme isteği gönderdi`;
+                
+                try {
+                    await addNotification(message, 'warning');
+                    
+                    // Add to pending deletions
+                    const pendingDeletions = sessionData.pendingDeletions || {};
+                    const deleteId = `del_${Date.now()}`;
+                    pendingDeletions[deleteId] = {
+                        participantId: participantId,
+                        participantName: participant.name,
+                        drinkType: drinkType,
+                        requestedAt: Date.now(),
+                        requestedBy: participantId
+                    };
+                    
+                    await update(ref(database, `sessions/${currentSession}`), {
+                        pendingDeletions: pendingDeletions
+                    });
+                    
+                    showToast('Silme isteği admin onayına gönderildi', 'info');
+                } catch (error) {
+                    alert('İstek gönderilirken hata: ' + error.message);
+                }
+                return;
+            }
+            
+            // Admin can delete directly
             document.getElementById('deleteDrinkMessage').textContent = 
                 `${participant.name} için ${drinkType} silinsin mi?`;
             
@@ -1704,6 +2022,10 @@
                     drinkHistory: updatedHistory,
                     undoStack: updatedUndo
                 });
+
+                // Add notification
+                const participant = sessionData.participants[participantId];
+                await addNotification(`${participant.name} için ${drinkType} silindi`, 'error');
 
                 deleteDrinkModal.classList.add('hidden');
                 pendingAction = null;
@@ -1871,6 +2193,75 @@
             pendingAdminAction = null;
         });
 
+        // Approve deletion request
+        window.approveDeletion = async function(deleteId) {
+            if (!isAdmin) return;
+
+            const pendingDeletions = { ...(sessionData.pendingDeletions || {}) };
+            const deletion = pendingDeletions[deleteId];
+            
+            if (!deletion) return;
+
+            const { participantId, drinkType, participantName } = deletion;
+            
+            const updatedDrinks = { ...sessionData.drinks };
+            const updatedHistory = { ...sessionData.drinkHistory };
+
+            // Delete the drink
+            if (updatedDrinks[participantId] && updatedDrinks[participantId][drinkType]) {
+                delete updatedDrinks[participantId][drinkType];
+                if (Object.keys(updatedDrinks[participantId]).length === 0) {
+                    delete updatedDrinks[participantId];
+                }
+            }
+
+            if (updatedHistory[participantId]) {
+                updatedHistory[participantId] = updatedHistory[participantId].filter(entry => entry.drink !== drinkType);
+                if (updatedHistory[participantId].length === 0) {
+                    delete updatedHistory[participantId];
+                }
+            }
+
+            // Remove from pending
+            delete pendingDeletions[deleteId];
+
+            try {
+                await update(ref(database, `sessions/${currentSession}`), {
+                    drinks: updatedDrinks,
+                    drinkHistory: updatedHistory,
+                    pendingDeletions: pendingDeletions
+                });
+
+                await addNotification(`${participantName} için ${drinkType} silme isteği onaylandı`, 'success');
+                showToast('Silme isteği onaylandı', 'success');
+            } catch (error) {
+                alert('Onaylama sırasında hata: ' + error.message);
+            }
+        };
+
+        // Reject deletion request
+        window.rejectDeletion = async function(deleteId) {
+            if (!isAdmin) return;
+
+            const pendingDeletions = { ...(sessionData.pendingDeletions || {}) };
+            const deletion = pendingDeletions[deleteId];
+            
+            if (!deletion) return;
+
+            delete pendingDeletions[deleteId];
+
+            try {
+                await update(ref(database, `sessions/${currentSession}`), {
+                    pendingDeletions: pendingDeletions
+                });
+
+                await addNotification(`${deletion.participantName} için ${deletion.drinkType} silme isteği reddedildi`, 'warning');
+                showToast('Silme isteği reddedildi', 'warning');
+            } catch (error) {
+                alert('Reddetme sırasında hata: ' + error.message);
+            }
+        };
+
         // Remove participant (admin only)
         window.removeParticipant = async function(participantId) {
             if (!isAdmin) {
@@ -1914,7 +2305,8 @@
                 drinks: {},
                 drinkTypes: [],
                 drinkHistory: {},
-                undoStack: []
+                undoStack: [],
+                notifications: []
             };
             
             localStorage.removeItem('currentSession');
