@@ -1109,6 +1109,9 @@
                 const data = snapshot.val();
                 sessionData = data;
                 
+                console.log('Session data loaded:', sessionData);
+                console.log('Participants:', sessionData.participants);
+                
                 showSessionInfo();
                 renderMainContent();
             });
@@ -1116,9 +1119,15 @@
 
         // Render Main Content
         function renderMainContent() {
+            console.log('=== RENDER MAIN CONTENT START ===');
+            console.log('isAdmin:', isAdmin);
+            console.log('sessionData:', sessionData);
+            console.log('mainContent element:', mainContent);
+            
             let html = '';
 
             if (isAdmin) {
+                console.log('Adding admin controls...');
                 html += `
                     <div class="admin-controls">
                         <button class="btn-primary" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
@@ -1131,12 +1140,18 @@
             const now = Date.now();
             const participants = sessionData.participants || {};
             
+            console.log('Participants object:', participants);
+            console.log('Participants count:', Object.keys(participants).length);
+            
             if (Object.keys(participants).length === 0) {
+                console.log('No participants, showing empty state');
                 html += '<div class="empty-state">Henüz katılımcı yok. + Katılımcı Ekle butonuna tıklayın!</div>';
                 mainContent.innerHTML = html;
+                console.log('HTML set to mainContent');
                 return;
             }
             
+            console.log('Rendering participant cards...');
             Object.entries(participants).forEach(([pid, participant]) => {
                 if (!participant.isActive) return;
 
@@ -1196,7 +1211,10 @@
                 `;
             }
 
+            console.log('Final HTML length:', html.length);
+            console.log('Setting innerHTML...');
             mainContent.innerHTML = html;
+            console.log('=== RENDER MAIN CONTENT END ===');
         }
 
         // Check if participant needs attention
