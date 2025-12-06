@@ -1,2412 +1,1557 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TKB İçki Takibi</title>
-    <!-- Version 1.0 -->
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: #e0e0e0;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #0f1419;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            border: 1px solid #2a2a3e;
-        }
-
-        h1 {
-            color: #e0e0e0;
-            margin-bottom: 10px;
-            text-align: center;
-            font-size: 28px;
-        }
-
-        .session-info {
-            background: #1a2332;
-            border: 2px solid #4a90e2;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .session-code {
-            font-size: 24px;
-            font-weight: 700;
-            color: #4a90e2;
-            letter-spacing: 2px;
-        }
-
-        .session-role {
-            font-size: 12px;
-            color: #b0b0b0;
-            margin-top: 5px;
-        }
-
-        .session-role.admin {
-            color: #ff6b6b;
-            font-weight: 600;
-        }
-
-        .connection-status {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            z-index: 2000;
-            display: none;
-        }
-
-        .connection-status.offline {
-            display: block;
-            background: #dc3545;
-            color: white;
-            animation: blink 1.5s infinite;
-        }
-
-        .connection-status.online {
-            display: block;
-            background: #28a745;
-            color: white;
-            animation: fadeOut 2s forwards;
-        }
-
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; display: none; }
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .session-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-        }
-
-        .session-buttons button {
-            flex: 1;
-        }
-
-        .btn-primary {
-            width: 100%;
-            background: #4a90e2;
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .btn-primary:hover {
-            background: #357abd;
-        }
-
-        .btn-secondary {
-            background: #5a6268;
-        }
-
-        .btn-secondary:hover {
-            background: #4a525a;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
-        .btn-success {
-            background: #28a745;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-        }
-
-        .participant-card {
-            background: #1a2332;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            border-left: 4px solid #4a90e2;
-            border: 1px solid #2a2a3e;
-        }
-
-        .participant-card.needs-attention {
-            border-left: 4px solid #dc3545;
-            background: #2a1a1a;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
-            50% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-        }
-
-        .participant-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .participant-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #e0e0e0;
-        }
-
-        .participant-name.self {
-            color: #4a90e2;
-        }
-
-        .participant-info {
-            font-size: 12px;
-            color: #b0b0b0;
-            margin-top: 4px;
-        }
-
-        .attention-badge {
-            background: #dc3545;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .drink-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            color: #b0b0b0;
-            border-bottom: 1px solid #2a2a3e;
-        }
-
-        .drink-item:last-child {
-            border-bottom: none;
-        }
-
-        .drink-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
-
-        .drink-name {
-            font-weight: 500;
-            color: #e0e0e0;
-        }
-
-        .drink-quantity {
-            background: #4a90e2;
-            color: white;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .drink-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-icon {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            font-size: 18px;
-            border-radius: 4px;
-            transition: background 0.3s;
-        }
-
-        .btn-icon:hover {
-            background: #2a2a3e;
-        }
-
-        .btn-icon.btn-delete {
-            color: #ff6b6b;
-        }
-
-        .btn-icon.btn-decrease {
-            color: #b0b0b0;
-        }
-
-        .btn-icon.btn-increase {
-            color: #51cf66;
-        }
-
-        .add-drink-btn {
-            margin-top: 10px;
-            padding: 8px;
-            font-size: 14px;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: #6c757d;
-            padding: 40px 20px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: #1a2332;
-            padding: 25px;
-            border-radius: 12px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            border: 1px solid #2a2a3e;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #e0e0e0;
-        }
-
-        .modal-message {
-            color: #b0b0b0;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #b0b0b0;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #2a2a3e;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            background: #0f1419;
-            color: #e0e0e0;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: #4a90e2;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .modal-buttons button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-confirm {
-            background: #4a90e2;
-            color: white;
-        }
-
-        .btn-confirm:hover {
-            background: #357abd;
-        }
-
-        .btn-cancel {
-            background: #5a6268;
-            color: white;
-        }
-
-        .btn-cancel:hover {
-            background: #4a525a;
-        }
-
-        .participant-list {
-            max-height: 200px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-        }
-
-        .participant-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #0f1419;
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-
-        .participant-list-item span {
-            color: #e0e0e0;
-        }
-
-        .participant-list-item button {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .participant-list-item button:hover {
-            background: #c82333;
-        }
-
-        .admin-code-display {
-            background: #2a2a1a;
-            border: 2px solid #ffc107;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            text-align: center;
-        }
-
-        .admin-code-display strong {
-            font-size: 24px;
-            color: #ffc107;
-            letter-spacing: 2px;
-        }
-
-        .toast {
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            background: #1a2332;
-            border: 1px solid #2a2a3e;
-            border-left: 4px solid #4a90e2;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 2000;
-            animation: slideIn 0.3s ease-out;
-            max-width: 300px;
-        }
-
-        .toast.info {
-            border-left-color: #4a90e2;
-        }
-
-        .toast.success {
-            border-left-color: #28a745;
-        }
-
-        .toast.warning {
-            border-left-color: #ffc107;
-        }
-
-        .toast.error {
-            border-left-color: #dc3545;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .toast-message {
-            color: #e0e0e0;
-            font-size: 14px;
-        }
-
-        .admin-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .admin-controls button {
-            flex: 1;
-            padding: 10px;
-            font-size: 14px;
-        }
-
-        .undo-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .undo-btn:hover {
-            background: #5a6268;
-        }
-
-        .undo-btn:disabled {
-            background: #3a3a3a;
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-
-        .tab-navigation {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #2a2a3e;
-        }
-
-        .tab-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            color: #b0b0b0;
-            padding: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .tab-btn:hover {
-            color: #e0e0e0;
-            background: #1a2332;
-        }
-
-        .tab-btn.active {
-            color: #4a90e2;
-            border-bottom-color: #4a90e2;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            background: #dc3545;
-            color: white;
-            border-radius: 12px;
-            padding: 2px 8px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .notification-item {
-            background: #1a2332;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border-left: 4px solid #4a90e2;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .notification-item.warning {
-            border-left-color: #ffc107;
-        }
-
-        .notification-item.error {
-            border-left-color: #dc3545;
-        }
-
-        .notification-item.success {
-            border-left-color: #28a745;
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-message {
-            color: #e0e0e0;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .notification-time {
-            color: #6c757d;
-            font-size: 12px;
-        }
-
-        .notification-delete {
-            background: none;
-            border: none;
-            color: #ff6b6b;
-            cursor: pointer;
-            font-size: 18px;
-            padding: 5px;
-        }
-
-        .notification-delete:hover {
-            color: #ff4444;
-        }
-
-        .empty-notifications {
-            text-align: center;
-            color: #6c757d;
-            padding: 60px 20px;
-        }
-
-        .pending-approval {
-            background: #2a2a1a;
-            border: 2px solid #ffc107;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
-
-        .pending-approval-text {
-            color: #ffc107;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .pending-approval-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .pending-approval-actions button {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .credits {
-            text-align: center;
-            padding: 20px;
-            margin-top: 30px;
-            color: #6c757d;
-            font-size: 12px;
-            border-top: 1px solid #2a2a3e;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 24px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🍺 TKB İçki Takibi</h1>
-        
-        <!-- Connection Status -->
-        <div id="connectionStatus" class="connection-status"></div>
-        
-        <!-- Session Info (shown when in a session) -->
-        <div id="sessionInfo" class="session-info hidden">
-            <div class="session-code" id="sessionCodeDisplay"></div>
-            <div class="session-role" id="sessionRole"></div>
-        </div>
-
-        <!-- Tab Navigation -->
-        <div id="tabNavigation" class="tab-navigation hidden">
-            <button class="tab-btn active" id="mainTab">Ana Sayfa</button>
-            <button class="tab-btn" id="notificationsTab">Bildirimler <span class="notification-badge hidden" id="notificationCount">0</span></button>
-            <button class="tab-btn" id="approvalsTab">Onaylar <span class="notification-badge hidden" id="approvalCount">0</span></button>
-        </div>
-
-        <!-- Session Management (shown when not in a session) -->
-        <div id="sessionManagement" class="session-buttons">
-            <button class="btn-primary" id="createSessionBtn">Yeni Oturum</button>
-            <button class="btn-primary btn-secondary" id="joinSessionBtn">Oturuma Katıl</button>
-        </div>
-
-        <!-- Main Content -->
-        <div id="mainContent"></div>
-
-        <!-- Notifications Content -->
-        <div id="notificationsContent" class="hidden"></div>
-
-        <!-- Approvals Content -->
-        <div id="approvalsContent" class="hidden"></div>
-    </div>
-
-    <!-- Credits -->
-    <div class="credits">
-        💻 Saner Apaydın tarafından geliştirilmiştir
-    </div>
-
-    <!-- Create Session Modal -->
-    <div id="createSessionModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">Yeni Oturum Oluştur</div>
-            
-            <div class="form-group">
-                <label>Katılımcı Ekle:</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="participantNameInput" placeholder="İsim girin" autocomplete="off">
-                    <button class="btn-primary btn-success" id="addParticipantBtn" style="width: auto; padding: 12px 20px;">+ Ekle</button>
+// Import Firebase modules
+import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, update, remove, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyBMVTZBMXjBDT45foOQPGCnL5xNRqWNEkw",
+    authDomain: "drink-tracker-b7bc1.firebaseapp.com",
+    databaseURL: "https://drink-tracker-b7bc1-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "drink-tracker-b7bc1",
+    storageBucket: "drink-tracker-b7bc1.firebasestorage.app",
+    messagingSenderId: "88411843150",
+    appId: "1:88411843150:web:eb86e61187f2cae7b1311f"
+};
+
+// Initialize Firebase
+const app = initFirebase(firebaseConfig);
+const database = getDatabase(app);
+
+// Monitor connection status
+const connectionStatus = document.getElementById('connectionStatus');
+const connectedRef = ref(database, '.info/connected');
+onValue(connectedRef, (snapshot) => {
+    if (snapshot.val() === true) {
+        connectionStatus.textContent = '✓ Bağlandı';
+        connectionStatus.className = 'connection-status online';
+    } else {
+        connectionStatus.textContent = '⚠ Çevrimdışı';
+        connectionStatus.className = 'connection-status offline';
+    }
+});
+
+// Session state
+let currentSession = localStorage.getItem('currentSession');
+let isAdmin = localStorage.getItem('isAdmin') === 'true';
+let adminCode = localStorage.getItem('adminCode');
+let userId = localStorage.getItem('userId');
+let currentParticipantId = localStorage.getItem('currentParticipantId');
+
+// Generate user ID if not exists
+if (!userId) {
+    userId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    localStorage.setItem('userId', userId);
+}
+
+// Notification permission
+let notificationsEnabled = false;
+
+// Request notification permission
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.log('This browser does not support notifications');
+        return false;
+    }
+
+    console.log('Current notification permission:', Notification.permission);
+
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = true;
+        console.log('Notifications already granted');
+        return true;
+    }
+
+    if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        notificationsEnabled = permission === 'granted';
+        console.log('Permission request result:', permission, 'notificationsEnabled:', notificationsEnabled);
+        return notificationsEnabled;
+    }
+
+    console.log('Notifications denied');
+    return false;
+}
+
+// Show browser notification
+function showBrowserNotification(title, body, options = {}) {
+    console.log('showBrowserNotification called:', {
+        title,
+        body,
+        notificationsEnabled,
+        permission: Notification.permission
+    });
+
+    if (!notificationsEnabled) {
+        console.warn('Notifications not enabled');
+        return;
+    }
+
+    const notification = new Notification(title, {
+        body: body,
+        icon: '🍺',
+        badge: '🍺',
+        tag: 'drink-notification',
+        requireInteraction: false,
+        ...options
+    });
+
+    console.log('Notification created:', notification);
+
+    // Auto close after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+
+    // Play sound
+    playNotificationSound();
+
+    // Vibrate
+    if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+    }
+}
+
+// Play notification sound
+function playNotificationSound() {
+    // Simple beep sound using Web Audio API
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {
+        console.log('Could not play sound:', e);
+    }
+}
+
+// Session data
+let sessionData = {
+    participants: {},
+    drinks: {},
+    drinkTypes: [],
+    drinkHistory: {},
+    undoStack: [],
+    notifications: []  // New: Persistent notifications
+};
+
+// Temporary data for session creation
+let tempParticipants = [];
+let pendingAction = null;
+let pendingAdminAction = null;
+
+// DOM elements
+const sessionManagement = document.getElementById('sessionManagement');
+const sessionInfo = document.getElementById('sessionInfo');
+const sessionCodeDisplay = document.getElementById('sessionCodeDisplay');
+const sessionRole = document.getElementById('sessionRole');
+const mainContent = document.getElementById('mainContent');
+const notificationsContent = document.getElementById('notificationsContent');
+const approvalsContent = document.getElementById('approvalsContent');
+const tabNavigation = document.getElementById('tabNavigation');
+const mainTab = document.getElementById('mainTab');
+const notificationsTab = document.getElementById('notificationsTab');
+const approvalsTab = document.getElementById('approvalsTab');
+const notificationCount = document.getElementById('notificationCount');
+const approvalCount = document.getElementById('approvalCount');
+
+// Modal elements
+const createSessionModal = document.getElementById('createSessionModal');
+const sessionCreatedModal = document.getElementById('sessionCreatedModal');
+const joinSessionModal = document.getElementById('joinSessionModal');
+const selectParticipantModal = document.getElementById('selectParticipantModal');
+const addParticipantSessionModal = document.getElementById('addParticipantSessionModal');
+const addDrinkModal = document.getElementById('addDrinkModal');
+const adjustDrinkModal = document.getElementById('adjustDrinkModal');
+const deleteDrinkModal = document.getElementById('deleteDrinkModal');
+const adminCodeModal = document.getElementById('adminCodeModal');
+
+// Generate session code
+function generateSessionCode() {
+    const words = ['ASLAN', 'KARTAL', 'KURT', 'PARS', 'AYAK', 'DALGA', 'DENIZ', 'GUNES', 'YILDIZ', 'BULUT', 'FIRTINA', 'DAGLAR', 'ORMAN', 'GOKYUZU', 'RUZGAR'];
+    const word = words[Math.floor(Math.random() * words.length)];
+    const num = Math.floor(10 + Math.random() * 90);
+    return `${word}${num}`;
+}
+
+// Generate admin code
+function generateAdminCode() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+// Generate participant ID
+function generateParticipantId() {
+    return 'p_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<div class="toast-message">${message}</div>`;
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Initialize app
+initializeApp();
+
+// Tab Navigation
+mainTab.addEventListener('click', () => {
+    mainTab.classList.add('active');
+    notificationsTab.classList.remove('active');
+    approvalsTab.classList.remove('active');
+    mainContent.classList.remove('hidden');
+    notificationsContent.classList.add('hidden');
+    approvalsContent.classList.add('hidden');
+});
+
+notificationsTab.addEventListener('click', () => {
+    notificationsTab.classList.add('active');
+    mainTab.classList.remove('active');
+    approvalsTab.classList.remove('active');
+    notificationsContent.classList.remove('hidden');
+    mainContent.classList.add('hidden');
+    approvalsContent.classList.add('hidden');
+    renderNotifications();
+});
+
+approvalsTab.addEventListener('click', () => {
+    approvalsTab.classList.add('active');
+    mainTab.classList.remove('active');
+    notificationsTab.classList.remove('active');
+    approvalsContent.classList.remove('hidden');
+    mainContent.classList.add('hidden');
+    notificationsContent.classList.add('hidden');
+    renderApprovals();
+});
+
+// Add notification to session
+async function addNotification(message, type = 'info') {
+    const notification = {
+        id: Date.now(),
+        message: message,
+        type: type,
+        timestamp: Date.now()
+    };
+
+    const notifications = sessionData.notifications || [];
+    notifications.push(notification);
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            notifications: notifications
+        });
+    } catch (error) {
+        console.error('Failed to add notification:', error);
+    }
+}
+
+// Render notifications
+function renderNotifications() {
+    const notifications = sessionData.notifications || [];
+
+    if (notifications.length === 0) {
+        notificationsContent.innerHTML = '<div class="empty-notifications">Henüz bildirim yok</div>';
+        return;
+    }
+
+    // Sort by timestamp, newest first
+    const sortedNotifications = [...notifications].sort((a, b) => b.timestamp - a.timestamp);
+
+    let html = '';
+    sortedNotifications.forEach(notification => {
+        const timeAgo = getTimeAgo(notification.timestamp);
+        html += `
+            <div class="notification-item ${notification.type}">
+                <div class="notification-content">
+                    <div class="notification-message">${notification.message}</div>
+                    <div class="notification-time">${timeAgo}</div>
+                </div>
+                ${isAdmin ? `<button class="notification-delete" onclick="window.deleteNotification(${notification.id})">✕</button>` : ''}
+            </div>
+        `;
+    });
+
+    notificationsContent.innerHTML = html;
+}
+
+// Delete notification
+window.deleteNotification = async function(notificationId) {
+    if (!isAdmin) return;
+
+    const notifications = (sessionData.notifications || []).filter(n => n.id !== notificationId);
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            notifications: notifications
+        });
+    } catch (error) {
+        alert('Bildirim silinirken hata: ' + error.message);
+    }
+};
+
+// Get time ago string
+function getTimeAgo(timestamp) {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (minutes < 1) return 'Az önce';
+    if (minutes < 60) return `${minutes} dakika önce`;
+    if (hours < 24) return `${hours} saat önce`;
+    return `${days} gün önce`;
+}
+
+// Update notification count badge
+function updateNotificationCount() {
+    const count = (sessionData.notifications || []).length;
+    if (count > 0) {
+        notificationCount.textContent = count;
+        notificationCount.classList.remove('hidden');
+    } else {
+        notificationCount.classList.add('hidden');
+    }
+}
+
+// Update approval count badge
+function updateApprovalCount() {
+    const count = Object.keys(sessionData.pendingDeletions || {}).length;
+    if (count > 0) {
+        approvalCount.textContent = count;
+        approvalCount.classList.remove('hidden');
+    } else {
+        approvalCount.classList.add('hidden');
+    }
+}
+
+// Render approvals
+function renderApprovals() {
+    if (!isAdmin) {
+        approvalsContent.innerHTML = '<div class="empty-notifications">Sadece yönetici onayları görebilir</div>';
+        return;
+    }
+
+    const pendingDeletions = sessionData.pendingDeletions || {};
+    const deletionEntries = Object.entries(pendingDeletions);
+
+    if (deletionEntries.length === 0) {
+        approvalsContent.innerHTML = '<div class="empty-notifications">Onay bekleyen işlem yok</div>';
+        return;
+    }
+
+    let html = '';
+    deletionEntries.forEach(([deleteId, deletion]) => {
+        const timeAgo = getTimeAgo(deletion.requestedAt);
+        html += `
+            <div class="pending-approval">
+                <div style="margin-bottom: 10px;">
+                    <div class="pending-approval-text" style="font-size: 16px; margin-bottom: 5px;">
+                        ${deletion.participantName} - ${deletion.drinkType} silmek istiyor
+                    </div>
+                    <div style="color: #6c757d; font-size: 12px;">${timeAgo}</div>
+                </div>
+                <div class="pending-approval-actions">
+                    <button class="btn-success" onclick="window.approveDeletion('${deleteId}')">✓ Onayla</button>
+                    <button class="btn-danger" onclick="window.rejectDeletion('${deleteId}')">✕ Reddet</button>
                 </div>
             </div>
+        `;
+    });
 
-            <div class="participant-list" id="participantList">
-                <div class="empty-state" style="padding: 20px;">Henüz katılımcı eklenmedi</div>
-            </div>
+    approvalsContent.innerHTML = html;
+}
 
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelCreateSession">İptal</button>
-                <button class="btn-primary" id="confirmCreateSession" disabled>Oturumu Başlat (0 kişi)</button>
-            </div>
-        </div>
-    </div>
+function initializeApp() {
+    // Request notification permission on app load
+    requestNotificationPermission();
 
-    <!-- Session Created Modal -->
-    <div id="sessionCreatedModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">Oturum Oluşturuldu!</div>
-            <div class="modal-message">
-                Bu oturum kodunu grubunuzla paylaşın:
-            </div>
-            <div class="admin-code-display">
-                <strong id="newSessionCode"></strong>
-            </div>
-            <div class="modal-message">
-                Admin kodunuz (bunu saklayın!):
-            </div>
-            <div class="admin-code-display">
-                <strong id="newAdminCode"></strong>
-            </div>
-            <div class="modal-message" style="font-size: 12px; color: #b0b0b0;">
-                Ekran görüntüsü alın veya not edin. Verileri silmek veya oturumu sonlandırmak için admin koduna ihtiyacınız olacak.
-            </div>
-            <button class="btn-primary" id="closeSessionCreatedModal">Anladım!</button>
-        </div>
-    </div>
+    if (currentSession) {
+        loadSession(currentSession);
+    } else {
+        showSessionManagement();
+    }
+}
 
-    <!-- Join Session Modal - Step 1: Code Entry -->
-    <div id="joinSessionModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">Oturuma Katıl</div>
-            <div class="modal-message">Oturum kodunu girin:</div>
-            <input type="text" id="joinSessionCodeInput" placeholder="örn: ASLAN47" autocomplete="off" style="margin-bottom: 15px;">
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelJoinSession">İptal</button>
-                <button class="btn-primary" id="confirmJoinSessionCode">Devam</button>
-            </div>
-        </div>
-    </div>
+function showSessionManagement() {
+    sessionManagement.classList.remove('hidden');
+    sessionInfo.classList.add('hidden');
+    tabNavigation.classList.add('hidden');
+    mainContent.innerHTML = '';
+    notificationsContent.innerHTML = '';
+    approvalsContent.innerHTML = '';
+}
 
-    <!-- Join Session Modal - Step 2: Participant Selection -->
-    <div id="selectParticipantModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">Kim Olarak Giriş Yapıyorsunuz?</div>
-            <div class="modal-message">
-                Oturum: <strong id="joiningSessionCode"></strong>
-            </div>
-            <div class="form-group">
-                <label>Katılımcı Seçin:</label>
-                <select id="participantSelect">
-                    <option value="">Seçin...</option>
-                </select>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelSelectParticipant">İptal</button>
-                <button class="btn-primary" id="confirmSelectParticipant">Katıl</button>
-            </div>
-        </div>
-    </div>
+function showSessionInfo() {
+    sessionManagement.classList.add('hidden');
+    sessionInfo.classList.remove('hidden');
+    tabNavigation.classList.remove('hidden');
+    sessionCodeDisplay.textContent = currentSession;
 
-    <!-- Add Participant Modal (for admin during session) -->
-    <div id="addParticipantSessionModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">Katılımcı Ekle</div>
-            <div class="form-group">
-                <label>İsim:</label>
-                <input type="text" id="newParticipantNameInput" placeholder="İsim girin" autocomplete="off">
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelAddParticipantSession">İptal</button>
-                <button class="btn-primary" id="confirmAddParticipantSession">Ekle</button>
-            </div>
-        </div>
-    </div>
+    // Count active participants
+    const activeCount = sessionData.participants ?
+        Object.values(sessionData.participants).filter(p => p.isActive).length : 0;
 
-    <!-- Add Drink Modal -->
-    <div id="addDrinkModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">İçki Ekle</div>
-            <div class="modal-message" id="addDrinkForName"></div>
-            <div class="form-group">
-                <label>İçki Türü:</label>
-                <input type="text" id="drinkTypeInput" list="drinkTypeList" placeholder="Bira, Votka, vb." autocomplete="off">
-                <datalist id="drinkTypeList"></datalist>
-            </div>
-            <div class="form-group">
-                <label>Miktar:</label>
-                <input type="number" id="drinkQuantityInput" value="1" min="1">
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelAddDrink">İptal</button>
-                <button class="btn-primary" id="confirmAddDrink">Ekle</button>
-            </div>
-        </div>
-    </div>
+    if (isAdmin) {
+        sessionRole.textContent = `Yönetici (${activeCount} kişi)`;
+        sessionRole.className = 'session-role admin';
+    } else {
+        const participantName = sessionData.participants?.[currentParticipantId]?.name || 'Katılımcı';
+        sessionRole.textContent = participantName;
+        sessionRole.className = 'session-role';
+    }
 
-    <!-- Adjust Drink Modal -->
-    <div id="adjustDrinkModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">Miktar Değiştirilsin mi?</div>
-            <div class="modal-message" id="adjustDrinkMessage"></div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelAdjustDrink">İptal</button>
-                <button class="btn-confirm" id="confirmAdjustDrink">Onayla</button>
+    updateNotificationCount();
+    if (isAdmin) {
+        updateApprovalCount();
+        approvalsTab.classList.remove('hidden');
+    } else {
+        approvalsTab.classList.add('hidden');
+    }
+}
+
+// Create Session - Open Modal
+document.getElementById('createSessionBtn').addEventListener('click', () => {
+    tempParticipants = [];
+    updateParticipantListUI();
+    createSessionModal.classList.remove('hidden');
+    document.getElementById('participantNameInput').focus();
+});
+
+// Add Participant to temp list
+document.getElementById('addParticipantBtn').addEventListener('click', addTempParticipant);
+document.getElementById('participantNameInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addTempParticipant();
+});
+
+function addTempParticipant() {
+    const input = document.getElementById('participantNameInput');
+    const name = input.value.trim();
+
+    if (!name) {
+        alert('Lütfen bir isim girin');
+        return;
+    }
+
+    if (tempParticipants.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        alert('Bu isim zaten eklendi');
+        return;
+    }
+
+    tempParticipants.push({
+        id: generateParticipantId(),
+        name: name
+    });
+
+    input.value = '';
+    input.focus();
+    updateParticipantListUI();
+}
+
+function updateParticipantListUI() {
+    const list = document.getElementById('participantList');
+    const confirmBtn = document.getElementById('confirmCreateSession');
+
+    if (tempParticipants.length === 0) {
+        list.innerHTML = '<div class="empty-state" style="padding: 20px;">Henüz katılımcı eklenmedi</div>';
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Oturumu Başlat (0 kişi)';
+    } else {
+        list.innerHTML = tempParticipants.map(p => `
+            <div class="participant-list-item">
+                <span>${p.name}</span>
+                <button onclick="window.removeTempParticipant('${p.id}')">✕ Sil</button>
             </div>
-        </div>
-    </div>
+        `).join('');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = `Oturumu Başlat (${tempParticipants.length} kişi)`;
+    }
+}
 
-    <!-- Delete Drink Modal -->
-    <div id="deleteDrinkModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">İçki Silinsin mi?</div>
-            <div class="modal-message" id="deleteDrinkMessage"></div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelDeleteDrink">İptal</button>
-                <button class="btn-confirm btn-danger" id="confirmDeleteDrink">Sil</button>
-            </div>
-        </div>
-    </div>
+window.removeTempParticipant = function(id) {
+    tempParticipants = tempParticipants.filter(p => p.id !== id);
+    updateParticipantListUI();
+};
 
-    <!-- Admin Code Modal -->
-    <div id="adminCodeModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-title">Admin Yetkisi Gerekli</div>
-            <div class="modal-message" id="adminCodeMessage">Admin kodunu girin:</div>
-            <input type="text" id="adminCodeInput" placeholder="4 haneli kod" autocomplete="off" maxlength="4" style="margin-bottom: 15px;">
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="cancelAdminCode">İptal</button>
-                <button class="btn-primary" id="confirmAdminCode">Onayla</button>
-            </div>
-        </div>
-    </div>
+// Cancel Create Session
+document.getElementById('cancelCreateSession').addEventListener('click', () => {
+    createSessionModal.classList.add('hidden');
+    tempParticipants = [];
+});
 
-    <!-- Toast Container -->
-    <div id="toastContainer"></div>
+// Confirm Create Session
+document.getElementById('confirmCreateSession').addEventListener('click', async () => {
+    if (tempParticipants.length === 0) return;
 
-    <!-- Firebase and Application Script -->
-    <script type="module">
-        // Import Firebase modules
-        import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, update, remove, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+    let sessionCode;
+    let attempts = 0;
 
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBMVTZBMXjBDT45foOQPGCnL5xNRqWNEkw",
-            authDomain: "drink-tracker-b7bc1.firebaseapp.com",
-            databaseURL: "https://drink-tracker-b7bc1-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "drink-tracker-b7bc1",
-            storageBucket: "drink-tracker-b7bc1.firebasestorage.app",
-            messagingSenderId: "88411843150",
-            appId: "1:88411843150:web:eb86e61187f2cae7b1311f"
+    while (attempts < 10) {
+        sessionCode = generateSessionCode();
+        const sessionRef = ref(database, `sessions/${sessionCode}`);
+        const snapshot = await get(sessionRef);
+
+        if (!snapshot.exists()) break;
+        attempts++;
+    }
+
+    if (attempts >= 10) {
+        alert('Benzersiz oturum kodu oluşturulamadı. Lütfen tekrar deneyin.');
+        return;
+    }
+
+    const adminCodeValue = generateAdminCode();
+    const participants = {};
+
+    tempParticipants.forEach(p => {
+        participants[p.id] = {
+            name: p.name,
+            userId: null,
+            addedAt: Date.now(),
+            addedBy: 'admin',
+            isActive: true
+        };
+    });
+
+    const newSessionData = {
+        adminCode: adminCodeValue,
+        adminUserId: userId,
+        createdAt: Date.now(),
+        participants: participants,
+        drinks: {},
+        drinkTypes: [],
+        drinkHistory: {},
+        undoStack: [],
+        notifications: []
+    };
+
+    try {
+        await set(ref(database, `sessions/${sessionCode}`), newSessionData);
+
+        currentSession = sessionCode;
+        isAdmin = true;
+        adminCode = adminCodeValue;
+        localStorage.setItem('currentSession', sessionCode);
+        localStorage.setItem('isAdmin', 'true');
+        localStorage.setItem('adminCode', adminCodeValue);
+
+        createSessionModal.classList.add('hidden');
+
+        document.getElementById('newSessionCode').textContent = sessionCode;
+        document.getElementById('newAdminCode').textContent = adminCodeValue;
+        sessionCreatedModal.classList.remove('hidden');
+    } catch (error) {
+        alert('Oturum oluşturulurken hata: ' + error.message);
+    }
+});
+
+// Close Session Created Modal
+document.getElementById('closeSessionCreatedModal').addEventListener('click', () => {
+    sessionCreatedModal.classList.add('hidden');
+    loadSession(currentSession);
+});
+
+// Join Session - Step 1: Code Entry
+document.getElementById('joinSessionBtn').addEventListener('click', () => {
+    joinSessionModal.classList.remove('hidden');
+    document.getElementById('joinSessionCodeInput').value = '';
+    document.getElementById('joinSessionCodeInput').focus();
+});
+
+document.getElementById('cancelJoinSession').addEventListener('click', () => {
+    joinSessionModal.classList.add('hidden');
+});
+
+document.getElementById('joinSessionCodeInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('confirmJoinSessionCode').click();
+});
+
+document.getElementById('confirmJoinSessionCode').addEventListener('click', async () => {
+    const code = document.getElementById('joinSessionCodeInput').value.trim().toUpperCase();
+
+    if (!code) {
+        alert('Lütfen bir oturum kodu girin');
+        return;
+    }
+
+    try {
+        const sessionRef = ref(database, `sessions/${code}`);
+        const snapshot = await get(sessionRef);
+
+        if (!snapshot.exists()) {
+            alert('Oturum bulunamadı. Lütfen kodu kontrol edip tekrar deneyin.');
+            return;
+        }
+
+        const data = snapshot.val();
+        const participantSelect = document.getElementById('participantSelect');
+        participantSelect.innerHTML = '<option value="">Seçin...</option>';
+
+        Object.entries(data.participants).forEach(([id, participant]) => {
+            if (participant.isActive) {
+                participantSelect.innerHTML += `<option value="${id}">${participant.name}</option>`;
+            }
+        });
+
+        document.getElementById('joiningSessionCode').textContent = code;
+        joinSessionModal.classList.add('hidden');
+        selectParticipantModal.classList.remove('hidden');
+
+        currentSession = code;
+    } catch (error) {
+        alert('Oturuma katılırken hata: ' + error.message);
+    }
+});
+
+// Join Session - Step 2: Participant Selection
+document.getElementById('cancelSelectParticipant').addEventListener('click', () => {
+    selectParticipantModal.classList.add('hidden');
+    currentSession = null;
+});
+
+document.getElementById('confirmSelectParticipant').addEventListener('click', async () => {
+    const participantId = document.getElementById('participantSelect').value;
+
+    if (!participantId) {
+        alert('Lütfen bir katılımcı seçin');
+        return;
+    }
+
+    try {
+        // Update participant with userId
+        await update(ref(database, `sessions/${currentSession}/participants/${participantId}`), {
+            userId: userId
+        });
+
+        currentParticipantId = participantId;
+        isAdmin = false;
+        localStorage.setItem('currentSession', currentSession);
+        localStorage.setItem('currentParticipantId', participantId);
+        localStorage.setItem('isAdmin', 'false');
+        localStorage.removeItem('adminCode');
+
+        selectParticipantModal.classList.add('hidden');
+        loadSession(currentSession);
+
+        showToast(`Oturuma katıldınız!`, 'success');
+    } catch (error) {
+        alert('Katılım sırasında hata: ' + error.message);
+    }
+});
+
+// Load Session
+function loadSession(sessionCode) {
+    const sessionRef = ref(database, `sessions/${sessionCode}`);
+
+    onValue(sessionRef, (snapshot) => {
+        if (!snapshot.exists()) {
+            alert('Oturum sonlandırıldı.');
+            leaveSession();
+            return;
+        }
+
+        const data = snapshot.val();
+
+        // Ensure all required fields exist with defaults
+        sessionData = {
+            participants: data.participants || {},
+            drinks: data.drinks || {},
+            drinkTypes: data.drinkTypes || [],
+            drinkHistory: data.drinkHistory || {},
+            undoStack: data.undoStack || [],
+            notifications: data.notifications || [],
+            pendingDeletions: data.pendingDeletions || {},
+            adminCode: data.adminCode,
+            adminUserId: data.adminUserId,
+            createdAt: data.createdAt
         };
 
-        // Initialize Firebase
-        const app = initFirebase(firebaseConfig);
-        const database = getDatabase(app);
-
-        // Monitor connection status
-        const connectionStatus = document.getElementById('connectionStatus');
-        const connectedRef = ref(database, '.info/connected');
-        onValue(connectedRef, (snapshot) => {
-            if (snapshot.val() === true) {
-                connectionStatus.textContent = '✓ Bağlandı';
-                connectionStatus.className = 'connection-status online';
-            } else {
-                connectionStatus.textContent = '⚠ Çevrimdışı';
-                connectionStatus.className = 'connection-status offline';
-            }
-        });
-
-        // Session state
-        let currentSession = localStorage.getItem('currentSession');
-        let isAdmin = localStorage.getItem('isAdmin') === 'true';
-        let adminCode = localStorage.getItem('adminCode');
-        let userId = localStorage.getItem('userId');
-        let currentParticipantId = localStorage.getItem('currentParticipantId');
-        
-        // Generate user ID if not exists
-        if (!userId) {
-            userId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-            localStorage.setItem('userId', userId);
+        showSessionInfo();
+        renderMainContent();
+        updateNotificationCount();
+        if (isAdmin) {
+            updateApprovalCount();
         }
+    });
+}
 
-        // Notification permission
-        let notificationsEnabled = false;
+// Render Main Content
+function renderMainContent() {
+    let html = '';
 
-        // Request notification permission
-        async function requestNotificationPermission() {
-            if (!('Notification' in window)) {
-                console.log('This browser does not support notifications');
-                return false;
-            }
+    if (isAdmin) {
+        html += `
+            <div class="admin-controls">
+                <button class="btn-primary" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
+                <button class="undo-btn" onclick="window.undoLastAction()" ${!canUndo() ? 'disabled' : ''}>↶ Geri Al</button>
+            </div>
+        `;
+    }
 
-            console.log('Current notification permission:', Notification.permission);
+    // Render participants
+    const now = Date.now();
+    const participants = sessionData.participants || {};
 
-            if (Notification.permission === 'granted') {
-                notificationsEnabled = true;
-                console.log('Notifications already granted');
-                return true;
-            }
+    if (Object.keys(participants).length === 0) {
+        html += '<div class="empty-state">Henüz katılımcı yok. + Katılımcı Ekle butonuna tıklayın!</div>';
+        mainContent.innerHTML = html;
+        return;
+    }
 
-            if (Notification.permission !== 'denied') {
-                const permission = await Notification.requestPermission();
-                notificationsEnabled = permission === 'granted';
-                console.log('Permission request result:', permission, 'notificationsEnabled:', notificationsEnabled);
-                return notificationsEnabled;
-            }
+    Object.entries(participants).forEach(([pid, participant]) => {
+        if (!participant.isActive) return;
 
-            console.log('Notifications denied');
-            return false;
-        }
+        const isSelf = pid === currentParticipantId;
+        const needsAttention = checkIfNeedsAttention(pid, now);
+        const stats = getParticipantStats(pid, now);
+        const drinks = (sessionData.drinks && sessionData.drinks[pid]) ? sessionData.drinks[pid] : {};
+        const canEdit = isAdmin || isSelf;
 
-        // Show browser notification
-        function showBrowserNotification(title, body, options = {}) {
-            console.log('showBrowserNotification called:', {
-                title,
-                body,
-                notificationsEnabled,
-                permission: Notification.permission
-            });
-            
-            if (!notificationsEnabled) {
-                console.warn('Notifications not enabled');
-                return;
-            }
+        // Safely get drink entries
+        const drinkEntries = drinks && typeof drinks === 'object' ? Object.entries(drinks) : [];
 
-            const notification = new Notification(title, {
-                body: body,
-                icon: '🍺',
-                badge: '🍺',
-                tag: 'drink-notification',
-                requireInteraction: false,
-                ...options
-            });
-
-            console.log('Notification created:', notification);
-
-            // Auto close after 5 seconds
-            setTimeout(() => notification.close(), 5000);
-
-            // Play sound
-            playNotificationSound();
-
-            // Vibrate
-            if (navigator.vibrate) {
-                navigator.vibrate([200, 100, 200]);
-            }
-        }
-
-        // Play notification sound
-        function playNotificationSound() {
-            // Simple beep sound using Web Audio API
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.5);
-            } catch (e) {
-                console.log('Could not play sound:', e);
-            }
-        }
-
-        // Session data
-        let sessionData = {
-            participants: {},
-            drinks: {},
-            drinkTypes: [],
-            drinkHistory: {},
-            undoStack: [],
-            notifications: []  // New: Persistent notifications
-        };
-
-        // Temporary data for session creation
-        let tempParticipants = [];
-        let pendingAction = null;
-        let pendingAdminAction = null;
-
-        // DOM elements
-        const sessionManagement = document.getElementById('sessionManagement');
-        const sessionInfo = document.getElementById('sessionInfo');
-        const sessionCodeDisplay = document.getElementById('sessionCodeDisplay');
-        const sessionRole = document.getElementById('sessionRole');
-        const mainContent = document.getElementById('mainContent');
-        const notificationsContent = document.getElementById('notificationsContent');
-        const approvalsContent = document.getElementById('approvalsContent');
-        const tabNavigation = document.getElementById('tabNavigation');
-        const mainTab = document.getElementById('mainTab');
-        const notificationsTab = document.getElementById('notificationsTab');
-        const approvalsTab = document.getElementById('approvalsTab');
-        const notificationCount = document.getElementById('notificationCount');
-        const approvalCount = document.getElementById('approvalCount');
-
-        // Modal elements
-        const createSessionModal = document.getElementById('createSessionModal');
-        const sessionCreatedModal = document.getElementById('sessionCreatedModal');
-        const joinSessionModal = document.getElementById('joinSessionModal');
-        const selectParticipantModal = document.getElementById('selectParticipantModal');
-        const addParticipantSessionModal = document.getElementById('addParticipantSessionModal');
-        const addDrinkModal = document.getElementById('addDrinkModal');
-        const adjustDrinkModal = document.getElementById('adjustDrinkModal');
-        const deleteDrinkModal = document.getElementById('deleteDrinkModal');
-        const adminCodeModal = document.getElementById('adminCodeModal');
-
-        // Generate session code
-        function generateSessionCode() {
-            const words = ['ASLAN', 'KARTAL', 'KURT', 'PARS', 'AYAK', 'DALGA', 'DENIZ', 'GUNES', 'YILDIZ', 'BULUT', 'FIRTINA', 'DAGLAR', 'ORMAN', 'GOKYUZU', 'RUZGAR'];
-            const word = words[Math.floor(Math.random() * words.length)];
-            const num = Math.floor(10 + Math.random() * 90);
-            return `${word}${num}`;
-        }
-
-        // Generate admin code
-        function generateAdminCode() {
-            return Math.floor(1000 + Math.random() * 9000).toString();
-        }
-
-        // Generate participant ID
-        function generateParticipantId() {
-            return 'p_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        // Show toast notification
-        function showToast(message, type = 'info') {
-            const toastContainer = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `<div class="toast-message">${message}</div>`;
-            toastContainer.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease-out reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // Initialize app
-        initializeApp();
-
-        // Tab Navigation
-        mainTab.addEventListener('click', () => {
-            mainTab.classList.add('active');
-            notificationsTab.classList.remove('active');
-            approvalsTab.classList.remove('active');
-            mainContent.classList.remove('hidden');
-            notificationsContent.classList.add('hidden');
-            approvalsContent.classList.add('hidden');
-        });
-
-        notificationsTab.addEventListener('click', () => {
-            notificationsTab.classList.add('active');
-            mainTab.classList.remove('active');
-            approvalsTab.classList.remove('active');
-            notificationsContent.classList.remove('hidden');
-            mainContent.classList.add('hidden');
-            approvalsContent.classList.add('hidden');
-            renderNotifications();
-        });
-
-        approvalsTab.addEventListener('click', () => {
-            approvalsTab.classList.add('active');
-            mainTab.classList.remove('active');
-            notificationsTab.classList.remove('active');
-            approvalsContent.classList.remove('hidden');
-            mainContent.classList.add('hidden');
-            notificationsContent.classList.add('hidden');
-            renderApprovals();
-        });
-
-        // Add notification to session
-        async function addNotification(message, type = 'info') {
-            const notification = {
-                id: Date.now(),
-                message: message,
-                type: type,
-                timestamp: Date.now()
-            };
-
-            const notifications = sessionData.notifications || [];
-            notifications.push(notification);
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    notifications: notifications
-                });
-            } catch (error) {
-                console.error('Failed to add notification:', error);
-            }
-        }
-
-        // Render notifications
-        function renderNotifications() {
-            const notifications = sessionData.notifications || [];
-            
-            if (notifications.length === 0) {
-                notificationsContent.innerHTML = '<div class="empty-notifications">Henüz bildirim yok</div>';
-                return;
-            }
-
-            // Sort by timestamp, newest first
-            const sortedNotifications = [...notifications].sort((a, b) => b.timestamp - a.timestamp);
-
-            let html = '';
-            sortedNotifications.forEach(notification => {
-                const timeAgo = getTimeAgo(notification.timestamp);
-                html += `
-                    <div class="notification-item ${notification.type}">
-                        <div class="notification-content">
-                            <div class="notification-message">${notification.message}</div>
-                            <div class="notification-time">${timeAgo}</div>
-                        </div>
-                        ${isAdmin ? `<button class="notification-delete" onclick="window.deleteNotification(${notification.id})">✕</button>` : ''}
-                    </div>
-                `;
-            });
-
-            notificationsContent.innerHTML = html;
-        }
-
-        // Delete notification
-        window.deleteNotification = async function(notificationId) {
-            if (!isAdmin) return;
-
-            const notifications = (sessionData.notifications || []).filter(n => n.id !== notificationId);
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    notifications: notifications
-                });
-            } catch (error) {
-                alert('Bildirim silinirken hata: ' + error.message);
-            }
-        };
-
-        // Get time ago string
-        function getTimeAgo(timestamp) {
-            const now = Date.now();
-            const diff = now - timestamp;
-            const minutes = Math.floor(diff / 60000);
-            const hours = Math.floor(minutes / 60);
-            const days = Math.floor(hours / 24);
-
-            if (minutes < 1) return 'Az önce';
-            if (minutes < 60) return `${minutes} dakika önce`;
-            if (hours < 24) return `${hours} saat önce`;
-            return `${days} gün önce`;
-        }
-
-        // Update notification count badge
-        function updateNotificationCount() {
-            const count = (sessionData.notifications || []).length;
-            if (count > 0) {
-                notificationCount.textContent = count;
-                notificationCount.classList.remove('hidden');
-            } else {
-                notificationCount.classList.add('hidden');
-            }
-        }
-
-        // Update approval count badge
-        function updateApprovalCount() {
-            const count = Object.keys(sessionData.pendingDeletions || {}).length;
-            if (count > 0) {
-                approvalCount.textContent = count;
-                approvalCount.classList.remove('hidden');
-            } else {
-                approvalCount.classList.add('hidden');
-            }
-        }
-
-        // Render approvals
-        function renderApprovals() {
-            if (!isAdmin) {
-                approvalsContent.innerHTML = '<div class="empty-notifications">Sadece yönetici onayları görebilir</div>';
-                return;
-            }
-
-            const pendingDeletions = sessionData.pendingDeletions || {};
-            const deletionEntries = Object.entries(pendingDeletions);
-            
-            if (deletionEntries.length === 0) {
-                approvalsContent.innerHTML = '<div class="empty-notifications">Onay bekleyen işlem yok</div>';
-                return;
-            }
-
-            let html = '';
-            deletionEntries.forEach(([deleteId, deletion]) => {
-                const timeAgo = getTimeAgo(deletion.requestedAt);
-                html += `
-                    <div class="pending-approval">
-                        <div style="margin-bottom: 10px;">
-                            <div class="pending-approval-text" style="font-size: 16px; margin-bottom: 5px;">
-                                ${deletion.participantName} - ${deletion.drinkType} silmek istiyor
-                            </div>
-                            <div style="color: #6c757d; font-size: 12px;">${timeAgo}</div>
-                        </div>
-                        <div class="pending-approval-actions">
-                            <button class="btn-success" onclick="window.approveDeletion('${deleteId}')">✓ Onayla</button>
-                            <button class="btn-danger" onclick="window.rejectDeletion('${deleteId}')">✕ Reddet</button>
+        html += `
+            <div class="participant-card ${needsAttention ? 'needs-attention' : ''}">
+                <div class="participant-header">
+                    <div>
+                        <div class="participant-name ${isSelf ? 'self' : ''}">${participant.name}${isSelf ? ' (Ben)' : ''}</div>
+                        <div class="participant-info">
+                            ${stats.lastDrinkTime}<br>
+                            ${stats.avgTimeInfo}
                         </div>
                     </div>
-                `;
-            });
-
-            approvalsContent.innerHTML = html;
-        }
-
-        function initializeApp() {
-            // Request notification permission on app load
-            requestNotificationPermission();
-            
-            if (currentSession) {
-                loadSession(currentSession);
-            } else {
-                showSessionManagement();
-            }
-        }
-
-        function showSessionManagement() {
-            sessionManagement.classList.remove('hidden');
-            sessionInfo.classList.add('hidden');
-            tabNavigation.classList.add('hidden');
-            mainContent.innerHTML = '';
-            notificationsContent.innerHTML = '';
-            approvalsContent.innerHTML = '';
-        }
-
-        function showSessionInfo() {
-            sessionManagement.classList.add('hidden');
-            sessionInfo.classList.remove('hidden');
-            tabNavigation.classList.remove('hidden');
-            sessionCodeDisplay.textContent = currentSession;
-            
-            // Count active participants
-            const activeCount = sessionData.participants ? 
-                Object.values(sessionData.participants).filter(p => p.isActive).length : 0;
-            
-            if (isAdmin) {
-                sessionRole.textContent = `Yönetici (${activeCount} kişi)`;
-                sessionRole.className = 'session-role admin';
-            } else {
-                const participantName = sessionData.participants?.[currentParticipantId]?.name || 'Katılımcı';
-                sessionRole.textContent = participantName;
-                sessionRole.className = 'session-role';
-            }
-
-            updateNotificationCount();
-            if (isAdmin) {
-                updateApprovalCount();
-                approvalsTab.classList.remove('hidden');
-            } else {
-                approvalsTab.classList.add('hidden');
-            }
-        }
-
-        // Create Session - Open Modal
-        document.getElementById('createSessionBtn').addEventListener('click', () => {
-            tempParticipants = [];
-            updateParticipantListUI();
-            createSessionModal.classList.remove('hidden');
-            document.getElementById('participantNameInput').focus();
-        });
-
-        // Add Participant to temp list
-        document.getElementById('addParticipantBtn').addEventListener('click', addTempParticipant);
-        document.getElementById('participantNameInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addTempParticipant();
-        });
-
-        function addTempParticipant() {
-            const input = document.getElementById('participantNameInput');
-            const name = input.value.trim();
-            
-            if (!name) {
-                alert('Lütfen bir isim girin');
-                return;
-            }
-
-            if (tempParticipants.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-                alert('Bu isim zaten eklendi');
-                return;
-            }
-
-            tempParticipants.push({
-                id: generateParticipantId(),
-                name: name
-            });
-
-            input.value = '';
-            input.focus();
-            updateParticipantListUI();
-        }
-
-        function updateParticipantListUI() {
-            const list = document.getElementById('participantList');
-            const confirmBtn = document.getElementById('confirmCreateSession');
-            
-            if (tempParticipants.length === 0) {
-                list.innerHTML = '<div class="empty-state" style="padding: 20px;">Henüz katılımcı eklenmedi</div>';
-                confirmBtn.disabled = true;
-                confirmBtn.textContent = 'Oturumu Başlat (0 kişi)';
-            } else {
-                list.innerHTML = tempParticipants.map(p => `
-                    <div class="participant-list-item">
-                        <span>${p.name}</span>
-                        <button onclick="window.removeTempParticipant('${p.id}')">✕ Sil</button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        ${needsAttention ? '<span class="attention-badge">⚠️ Kontrol Et</span>' : ''}
+                        ${isAdmin ? `<button class="btn-icon btn-delete" onclick="window.removeParticipant('${pid}')" title="Katılımcıyı Çıkar">✕</button>` : ''}
                     </div>
-                `).join('');
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = `Oturumu Başlat (${tempParticipants.length} kişi)`;
-            }
-        }
+                </div>
 
-        window.removeTempParticipant = function(id) {
-            tempParticipants = tempParticipants.filter(p => p.id !== id);
-            updateParticipantListUI();
-        };
-
-        // Cancel Create Session
-        document.getElementById('cancelCreateSession').addEventListener('click', () => {
-            createSessionModal.classList.add('hidden');
-            tempParticipants = [];
-        });
-
-        // Confirm Create Session
-        document.getElementById('confirmCreateSession').addEventListener('click', async () => {
-            if (tempParticipants.length === 0) return;
-
-            let sessionCode;
-            let attempts = 0;
-            
-            while (attempts < 10) {
-                sessionCode = generateSessionCode();
-                const sessionRef = ref(database, `sessions/${sessionCode}`);
-                const snapshot = await get(sessionRef);
-                
-                if (!snapshot.exists()) break;
-                attempts++;
-            }
-
-            if (attempts >= 10) {
-                alert('Benzersiz oturum kodu oluşturulamadı. Lütfen tekrar deneyin.');
-                return;
-            }
-
-            const adminCodeValue = generateAdminCode();
-            const participants = {};
-            
-            tempParticipants.forEach(p => {
-                participants[p.id] = {
-                    name: p.name,
-                    userId: null,
-                    addedAt: Date.now(),
-                    addedBy: 'admin',
-                    isActive: true
-                };
-            });
-
-            const newSessionData = {
-                adminCode: adminCodeValue,
-                adminUserId: userId,
-                createdAt: Date.now(),
-                participants: participants,
-                drinks: {},
-                drinkTypes: [],
-                drinkHistory: {},
-                undoStack: [],
-                notifications: []
-            };
-
-            try {
-                await set(ref(database, `sessions/${sessionCode}`), newSessionData);
-                
-                currentSession = sessionCode;
-                isAdmin = true;
-                adminCode = adminCodeValue;
-                localStorage.setItem('currentSession', sessionCode);
-                localStorage.setItem('isAdmin', 'true');
-                localStorage.setItem('adminCode', adminCodeValue);
-
-                createSessionModal.classList.add('hidden');
-                
-                document.getElementById('newSessionCode').textContent = sessionCode;
-                document.getElementById('newAdminCode').textContent = adminCodeValue;
-                sessionCreatedModal.classList.remove('hidden');
-            } catch (error) {
-                alert('Oturum oluşturulurken hata: ' + error.message);
-            }
-        });
-
-        // Close Session Created Modal
-        document.getElementById('closeSessionCreatedModal').addEventListener('click', () => {
-            sessionCreatedModal.classList.add('hidden');
-            loadSession(currentSession);
-        });
-
-        // Join Session - Step 1: Code Entry
-        document.getElementById('joinSessionBtn').addEventListener('click', () => {
-            joinSessionModal.classList.remove('hidden');
-            document.getElementById('joinSessionCodeInput').value = '';
-            document.getElementById('joinSessionCodeInput').focus();
-        });
-
-        document.getElementById('cancelJoinSession').addEventListener('click', () => {
-            joinSessionModal.classList.add('hidden');
-        });
-
-        document.getElementById('joinSessionCodeInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('confirmJoinSessionCode').click();
-        });
-
-        document.getElementById('confirmJoinSessionCode').addEventListener('click', async () => {
-            const code = document.getElementById('joinSessionCodeInput').value.trim().toUpperCase();
-            
-            if (!code) {
-                alert('Lütfen bir oturum kodu girin');
-                return;
-            }
-
-            try {
-                const sessionRef = ref(database, `sessions/${code}`);
-                const snapshot = await get(sessionRef);
-                
-                if (!snapshot.exists()) {
-                    alert('Oturum bulunamadı. Lütfen kodu kontrol edip tekrar deneyin.');
-                    return;
-                }
-
-                const data = snapshot.val();
-                const participantSelect = document.getElementById('participantSelect');
-                participantSelect.innerHTML = '<option value="">Seçin...</option>';
-                
-                Object.entries(data.participants).forEach(([id, participant]) => {
-                    if (participant.isActive) {
-                        participantSelect.innerHTML += `<option value="${id}">${participant.name}</option>`;
-                    }
-                });
-
-                document.getElementById('joiningSessionCode').textContent = code;
-                joinSessionModal.classList.add('hidden');
-                selectParticipantModal.classList.remove('hidden');
-                
-                currentSession = code;
-            } catch (error) {
-                alert('Oturuma katılırken hata: ' + error.message);
-            }
-        });
-
-        // Join Session - Step 2: Participant Selection
-        document.getElementById('cancelSelectParticipant').addEventListener('click', () => {
-            selectParticipantModal.classList.add('hidden');
-            currentSession = null;
-        });
-
-        document.getElementById('confirmSelectParticipant').addEventListener('click', async () => {
-            const participantId = document.getElementById('participantSelect').value;
-            
-            if (!participantId) {
-                alert('Lütfen bir katılımcı seçin');
-                return;
-            }
-
-            try {
-                // Update participant with userId
-                await update(ref(database, `sessions/${currentSession}/participants/${participantId}`), {
-                    userId: userId
-                });
-
-                currentParticipantId = participantId;
-                isAdmin = false;
-                localStorage.setItem('currentSession', currentSession);
-                localStorage.setItem('currentParticipantId', participantId);
-                localStorage.setItem('isAdmin', 'false');
-                localStorage.removeItem('adminCode');
-
-                selectParticipantModal.classList.add('hidden');
-                loadSession(currentSession);
-                
-                showToast(`Oturuma katıldınız!`, 'success');
-            } catch (error) {
-                alert('Katılım sırasında hata: ' + error.message);
-            }
-        });
-
-        // Load Session
-        function loadSession(sessionCode) {
-            const sessionRef = ref(database, `sessions/${sessionCode}`);
-            
-            onValue(sessionRef, (snapshot) => {
-                if (!snapshot.exists()) {
-                    alert('Oturum sonlandırıldı.');
-                    leaveSession();
-                    return;
-                }
-
-                const data = snapshot.val();
-                
-                // Ensure all required fields exist with defaults
-                sessionData = {
-                    participants: data.participants || {},
-                    drinks: data.drinks || {},
-                    drinkTypes: data.drinkTypes || [],
-                    drinkHistory: data.drinkHistory || {},
-                    undoStack: data.undoStack || [],
-                    notifications: data.notifications || [],
-                    pendingDeletions: data.pendingDeletions || {},
-                    adminCode: data.adminCode,
-                    adminUserId: data.adminUserId,
-                    createdAt: data.createdAt
-                };
-                
-                showSessionInfo();
-                renderMainContent();
-                updateNotificationCount();
-                if (isAdmin) {
-                    updateApprovalCount();
-                }
-            });
-        }
-
-        // Render Main Content
-        function renderMainContent() {
-            let html = '';
-
-            if (isAdmin) {
-                html += `
-                    <div class="admin-controls">
-                        <button class="btn-primary" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
-                        <button class="undo-btn" onclick="window.undoLastAction()" ${!canUndo() ? 'disabled' : ''}>↶ Geri Al</button>
-                    </div>
-                `;
-            }
-
-            // Render participants
-            const now = Date.now();
-            const participants = sessionData.participants || {};
-            
-            if (Object.keys(participants).length === 0) {
-                html += '<div class="empty-state">Henüz katılımcı yok. + Katılımcı Ekle butonuna tıklayın!</div>';
-                mainContent.innerHTML = html;
-                return;
-            }
-            
-            Object.entries(participants).forEach(([pid, participant]) => {
-                if (!participant.isActive) return;
-
-                const isSelf = pid === currentParticipantId;
-                const needsAttention = checkIfNeedsAttention(pid, now);
-                const stats = getParticipantStats(pid, now);
-                const drinks = (sessionData.drinks && sessionData.drinks[pid]) ? sessionData.drinks[pid] : {};
-                const canEdit = isAdmin || isSelf;
-                
-                // Safely get drink entries
-                const drinkEntries = drinks && typeof drinks === 'object' ? Object.entries(drinks) : [];
-
-                html += `
-                    <div class="participant-card ${needsAttention ? 'needs-attention' : ''}">
-                        <div class="participant-header">
-                            <div>
-                                <div class="participant-name ${isSelf ? 'self' : ''}">${participant.name}${isSelf ? ' (Ben)' : ''}</div>
-                                <div class="participant-info">
-                                    ${stats.lastDrinkTime}<br>
-                                    ${stats.avgTimeInfo}
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                ${needsAttention ? '<span class="attention-badge">⚠️ Kontrol Et</span>' : ''}
-                                ${isAdmin ? `<button class="btn-icon btn-delete" onclick="window.removeParticipant('${pid}')" title="Katılımcıyı Çıkar">✕</button>` : ''}
-                            </div>
+                ${drinkEntries.length > 0 ? drinkEntries.map(([drinkType, quantity]) => `
+                    <div class="drink-item">
+                        <div class="drink-info">
+                            <span class="drink-name">${drinkType}</span>
+                            <span class="drink-quantity">${quantity}</span>
                         </div>
-                        
-                        ${drinkEntries.length > 0 ? drinkEntries.map(([drinkType, quantity]) => `
-                            <div class="drink-item">
-                                <div class="drink-info">
-                                    <span class="drink-name">${drinkType}</span>
-                                    <span class="drink-quantity">${quantity}</span>
-                                </div>
-                                ${canEdit ? `
-                                    <div class="drink-actions">
-                                        <button class="btn-icon btn-decrease" onclick="window.adjustDrink('${pid}', '${drinkType}', -1)">−</button>
-                                        <button class="btn-icon btn-increase" onclick="window.adjustDrink('${pid}', '${drinkType}', 1)">+</button>
-                                        <button class="btn-icon btn-delete" onclick="window.deleteDrink('${pid}', '${drinkType}')">🗑️</button>
-                                    </div>
-                                ` : ''}
+                        ${canEdit ? `
+                            <div class="drink-actions">
+                                <button class="btn-icon btn-decrease" onclick="window.adjustDrink('${pid}', '${drinkType}', -1)">−</button>
+                                <button class="btn-icon btn-increase" onclick="window.adjustDrink('${pid}', '${drinkType}', 1)">+</button>
+                                <button class="btn-icon btn-delete" onclick="window.deleteDrink('${pid}', '${drinkType}')">🗑️</button>
                             </div>
-                        `).join('') : '<div class="empty-state" style="padding: 10px 0; font-size: 14px;">Henüz içki eklenmedi</div>'}
-                        
-                        ${canEdit ? `<button class="btn-primary add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
+                        ` : ''}
                     </div>
-                `;
-            });
+                `).join('') : '<div class="empty-state" style="padding: 10px 0; font-size: 14px;">Henüz içki eklenmedi</div>'}
 
-            // Admin controls at bottom
-            if (isAdmin) {
-                html += `
-                    <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('clearAll')" style="flex: 1;">Tümünü Sil</button>
-                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('endSession')" style="flex: 1;">Oturumu Sonlandır</button>
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div style="margin-top: 20px;">
-                        <button class="btn-primary btn-secondary" onclick="window.leaveSession()">Oturumdan Ayrıl</button>
-                    </div>
-                `;
-            }
+                ${canEdit ? `<button class="btn-primary add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
+            </div>
+        `;
+    });
 
-            mainContent.innerHTML = html;
+    // Admin controls at bottom
+    if (isAdmin) {
+        html += `
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn-primary btn-danger" onclick="window.requestAdminAction('clearAll')" style="flex: 1;">Tümünü Sil</button>
+                <button class="btn-primary btn-danger" onclick="window.requestAdminAction('endSession')" style="flex: 1;">Oturumu Sonlandır</button>
+            </div>
+        `;
+    } else {
+        html += `
+            <div style="margin-top: 20px;">
+                <button class="btn-primary btn-secondary" onclick="window.leaveSession()">Oturumdan Ayrıl</button>
+            </div>
+        `;
+    }
+
+    mainContent.innerHTML = html;
+}
+
+// Check if participant needs attention
+function checkIfNeedsAttention(participantId, now) {
+    if (!sessionData.drinkHistory || !sessionData.drinkHistory[participantId]) {
+        return false;
+    }
+
+    const history = sessionData.drinkHistory[participantId] || [];
+    if (history.length < 2) return false;
+
+    const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+    const lastDrink = sortedHistory[0];
+    const timeSinceLast = (now - lastDrink.timestamp) / 1000 / 60;
+
+    const intervals = [];
+    for (let i = 0; i < sortedHistory.length - 1; i++) {
+        intervals.push((sortedHistory[i].timestamp - sortedHistory[i + 1].timestamp) / 1000 / 60);
+    }
+    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+
+    return timeSinceLast > (avgInterval * 1.5);
+}
+
+// Get participant stats
+function getParticipantStats(participantId, now) {
+    if (!sessionData.drinkHistory || !sessionData.drinkHistory[participantId]) {
+        return {
+            lastDrinkTime: 'Son içki: -',
+            avgTimeInfo: 'Ort. aralık: -'
+        };
+    }
+
+    const history = sessionData.drinkHistory[participantId] || [];
+
+    if (history.length === 0) {
+        return {
+            lastDrinkTime: 'Son içki: -',
+            avgTimeInfo: 'Ort. aralık: -'
+        };
+    }
+
+    const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+    const lastDrink = sortedHistory[0];
+    const timeSinceLast = Math.floor((now - lastDrink.timestamp) / 1000 / 60);
+
+    let lastDrinkText = `Son içki: ${timeSinceLast}d önce`;
+
+    if (history.length < 2) {
+        return {
+            lastDrinkTime: lastDrinkText,
+            avgTimeInfo: 'Ort. aralık: -'
+        };
+    }
+
+    const intervals = [];
+    for (let i = 0; i < sortedHistory.length - 1; i++) {
+        intervals.push((sortedHistory[i].timestamp - sortedHistory[i + 1].timestamp) / 1000 / 60);
+    }
+    const avgInterval = Math.floor(intervals.reduce((a, b) => a + b, 0) / intervals.length);
+
+    return {
+        lastDrinkTime: lastDrinkText,
+        avgTimeInfo: `Ort. aralık: ${avgInterval}d`
+    };
+}
+
+// Open Add Participant Modal (during session)
+window.openAddParticipantModal = function() {
+    if (!isAdmin) return;
+    addParticipantSessionModal.classList.remove('hidden');
+    document.getElementById('newParticipantNameInput').value = '';
+    document.getElementById('newParticipantNameInput').focus();
+};
+
+document.getElementById('cancelAddParticipantSession').addEventListener('click', () => {
+    addParticipantSessionModal.classList.add('hidden');
+});
+
+document.getElementById('newParticipantNameInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('confirmAddParticipantSession').click();
+});
+
+document.getElementById('confirmAddParticipantSession').addEventListener('click', async () => {
+    const name = document.getElementById('newParticipantNameInput').value.trim();
+
+    if (!name) {
+        alert('Lütfen bir isim girin');
+        return;
+    }
+
+    const existingNames = Object.values(sessionData.participants)
+        .filter(p => p.isActive)
+        .map(p => p.name.toLowerCase());
+
+    if (existingNames.includes(name.toLowerCase())) {
+        alert('Bu isim zaten mevcut');
+        return;
+    }
+
+    const newId = generateParticipantId();
+    const newParticipant = {
+        name: name,
+        userId: null,
+        addedAt: Date.now(),
+        addedBy: 'admin',
+        isActive: true
+    };
+
+    try {
+        await update(ref(database, `sessions/${currentSession}/participants/${newId}`), newParticipant);
+        addParticipantSessionModal.classList.add('hidden');
+        showToast(`${name} eklendi`, 'success');
+    } catch (error) {
+        alert('Katılımcı eklenirken hata: ' + error.message);
+    }
+});
+
+// Open Add Drink Modal
+window.openAddDrinkModal = function(participantId) {
+    if (!isAdmin && participantId !== currentParticipantId) return;
+
+    const participant = sessionData.participants[participantId];
+    if (!participant) return;
+
+    document.getElementById('addDrinkForName').textContent = `${participant.name} için:`;
+
+    // Update drink type datalist
+    const datalist = document.getElementById('drinkTypeList');
+    const drinkTypes = sessionData.drinkTypes || [];
+    datalist.innerHTML = drinkTypes.map(type => `<option value="${type}">`).join('');
+
+    document.getElementById('drinkTypeInput').value = '';
+    document.getElementById('drinkQuantityInput').value = '1';
+
+    pendingAction = { type: 'addDrink', participantId: participantId };
+    addDrinkModal.classList.remove('hidden');
+    document.getElementById('drinkTypeInput').focus();
+};
+
+document.getElementById('cancelAddDrink').addEventListener('click', () => {
+    addDrinkModal.classList.add('hidden');
+    pendingAction = null;
+});
+
+document.getElementById('drinkTypeInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('drinkQuantityInput').focus();
+    }
+});
+
+document.getElementById('drinkQuantityInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('confirmAddDrink').click();
+});
+
+document.getElementById('confirmAddDrink').addEventListener('click', async () => {
+    if (!pendingAction || pendingAction.type !== 'addDrink') return;
+
+    const drinkType = document.getElementById('drinkTypeInput').value.trim();
+    const quantity = parseInt(document.getElementById('drinkQuantityInput').value);
+    const participantId = pendingAction.participantId;
+
+    if (!drinkType || quantity < 1) {
+        alert('Lütfen geçerli bir içki türü ve miktar girin');
+        return;
+    }
+
+    const participant = sessionData.participants[participantId];
+    const existingDrinkType = sessionData.drinkTypes.find(d => d.toLowerCase() === drinkType.toLowerCase()) || drinkType;
+
+    const updatedDrinks = { ...sessionData.drinks };
+    const updatedDrinkTypes = [...sessionData.drinkTypes];
+    const updatedHistory = { ...sessionData.drinkHistory };
+    const updatedUndo = [...(sessionData.undoStack || [])];
+
+    if (!updatedDrinkTypes.some(d => d.toLowerCase() === existingDrinkType.toLowerCase())) {
+        updatedDrinkTypes.push(existingDrinkType);
+    }
+
+    if (!updatedDrinks[participantId]) {
+        updatedDrinks[participantId] = {};
+    }
+
+    const oldQuantity = updatedDrinks[participantId][existingDrinkType] || 0;
+    updatedDrinks[participantId][existingDrinkType] = oldQuantity + quantity;
+
+    if (!updatedHistory[participantId]) {
+        updatedHistory[participantId] = [];
+    }
+
+    const timestamp = Date.now();
+    updatedHistory[participantId].push({
+        drink: existingDrinkType,
+        quantity: quantity,
+        timestamp: timestamp,
+        addedBy: isAdmin ? 'admin' : participantId
+    });
+
+    // Add to undo stack
+    updatedUndo.push({
+        action: 'addDrink',
+        participantId: participantId,
+        drink: existingDrinkType,
+        quantity: quantity,
+        timestamp: timestamp,
+        expiresAt: timestamp + 30000 // 30 seconds
+    });
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            drinks: updatedDrinks,
+            drinkTypes: updatedDrinkTypes,
+            drinkHistory: updatedHistory,
+            undoStack: updatedUndo
+        });
+
+        // Add notification logic (FIXED: Ensure notification is added for participants too)
+        const addedByName = isAdmin ? 'Yönetici' : participant.name;
+        const notificationMessage = `${addedByName} ${participant.name === addedByName ? '' : `${participant.name} için `}${quantity} ${existingDrinkType} ekledi`;
+        await addNotification(notificationMessage, 'info');
+
+        addDrinkModal.classList.add('hidden');
+        pendingAction = null;
+
+        // Notify admin if participant added
+        if (!isAdmin) {
+            // Will be shown via Firebase listener
         }
+    } catch (error) {
+        alert('İçki eklenirken hata: ' + error.message);
+    }
+});
 
-        // Check if participant needs attention
-        function checkIfNeedsAttention(participantId, now) {
-            if (!sessionData.drinkHistory || !sessionData.drinkHistory[participantId]) {
-                return false;
-            }
-            
-            const history = sessionData.drinkHistory[participantId] || [];
-            if (history.length < 2) return false;
+// Adjust Drink
+window.adjustDrink = function(participantId, drinkType, change) {
+    if (!isAdmin && participantId !== currentParticipantId) return;
 
-            const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
-            const lastDrink = sortedHistory[0];
-            const timeSinceLast = (now - lastDrink.timestamp) / 1000 / 60;
+    const participant = sessionData.participants[participantId];
+    const currentQty = sessionData.drinks[participantId]?.[drinkType] || 0;
+    const newQty = currentQty + change;
 
-            const intervals = [];
-            for (let i = 0; i < sortedHistory.length - 1; i++) {
-                intervals.push((sortedHistory[i].timestamp - sortedHistory[i + 1].timestamp) / 1000 / 60);
-            }
-            const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    let message;
+    if (newQty <= 0) {
+        message = `${participant.name} için ${drinkType} silinecek. Devam edilsin mi?`;
+    } else if (change > 0) {
+        message = `${participant.name} için ${Math.abs(change)} adet daha ${drinkType} eklensin mi? (${currentQty} → ${newQty})`;
+    } else {
+        message = `${participant.name} için ${drinkType} miktarı ${currentQty}'den ${newQty}'e düşürülsün mü?`;
+    }
 
-            return timeSinceLast > (avgInterval * 1.5);
+    document.getElementById('adjustDrinkMessage').textContent = message;
+    pendingAction = { type: 'adjustDrink', participantId, drinkType, change };
+    adjustDrinkModal.classList.remove('hidden');
+};
+
+document.getElementById('cancelAdjustDrink').addEventListener('click', () => {
+    adjustDrinkModal.classList.add('hidden');
+    pendingAction = null;
+});
+
+document.getElementById('confirmAdjustDrink').addEventListener('click', async () => {
+    if (!pendingAction || pendingAction.type !== 'adjustDrink') return;
+
+    const { participantId, drinkType, change } = pendingAction;
+
+    const updatedDrinks = { ...sessionData.drinks };
+    const updatedHistory = { ...sessionData.drinkHistory };
+    const updatedUndo = [...(sessionData.undoStack || [])];
+    const timestamp = Date.now();
+
+    const currentQty = updatedDrinks[participantId]?.[drinkType] || 0;
+    const newQty = currentQty + change;
+
+    if (change > 0) {
+        updatedDrinks[participantId][drinkType] = newQty;
+
+        if (!updatedHistory[participantId]) {
+            updatedHistory[participantId] = [];
         }
-
-        // Get participant stats
-        function getParticipantStats(participantId, now) {
-            if (!sessionData.drinkHistory || !sessionData.drinkHistory[participantId]) {
-                return {
-                    lastDrinkTime: 'Son içki: -',
-                    avgTimeInfo: 'Ort. aralık: -'
-                };
-            }
-            
-            const history = sessionData.drinkHistory[participantId] || [];
-            
-            if (history.length === 0) {
-                return {
-                    lastDrinkTime: 'Son içki: -',
-                    avgTimeInfo: 'Ort. aralık: -'
-                };
-            }
-
-            const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
-            const lastDrink = sortedHistory[0];
-            const timeSinceLast = Math.floor((now - lastDrink.timestamp) / 1000 / 60);
-
-            let lastDrinkText = `Son içki: ${timeSinceLast}d önce`;
-
-            if (history.length < 2) {
-                return {
-                    lastDrinkTime: lastDrinkText,
-                    avgTimeInfo: 'Ort. aralık: -'
-                };
-            }
-
-            const intervals = [];
-            for (let i = 0; i < sortedHistory.length - 1; i++) {
-                intervals.push((sortedHistory[i].timestamp - sortedHistory[i + 1].timestamp) / 1000 / 60);
-            }
-            const avgInterval = Math.floor(intervals.reduce((a, b) => a + b, 0) / intervals.length);
-
-            return {
-                lastDrinkTime: lastDrinkText,
-                avgTimeInfo: `Ort. aralık: ${avgInterval}d`
-            };
-        }
-
-        // Open Add Participant Modal (during session)
-        window.openAddParticipantModal = function() {
-            if (!isAdmin) return;
-            addParticipantSessionModal.classList.remove('hidden');
-            document.getElementById('newParticipantNameInput').value = '';
-            document.getElementById('newParticipantNameInput').focus();
-        };
-
-        document.getElementById('cancelAddParticipantSession').addEventListener('click', () => {
-            addParticipantSessionModal.classList.add('hidden');
+        updatedHistory[participantId].push({
+            drink: drinkType,
+            quantity: change,
+            timestamp: timestamp,
+            addedBy: isAdmin ? 'admin' : participantId
         });
 
-        document.getElementById('newParticipantNameInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('confirmAddParticipantSession').click();
+        updatedUndo.push({
+            action: 'adjustDrink',
+            participantId: participantId,
+            drink: drinkType,
+            oldValue: currentQty,
+            newValue: newQty,
+            timestamp: timestamp,
+            expiresAt: timestamp + 30000
         });
-
-        document.getElementById('confirmAddParticipantSession').addEventListener('click', async () => {
-            const name = document.getElementById('newParticipantNameInput').value.trim();
-            
-            if (!name) {
-                alert('Lütfen bir isim girin');
-                return;
-            }
-
-            const existingNames = Object.values(sessionData.participants)
-                .filter(p => p.isActive)
-                .map(p => p.name.toLowerCase());
-            
-            if (existingNames.includes(name.toLowerCase())) {
-                alert('Bu isim zaten mevcut');
-                return;
-            }
-
-            const newId = generateParticipantId();
-            const newParticipant = {
-                name: name,
-                userId: null,
-                addedAt: Date.now(),
-                addedBy: 'admin',
-                isActive: true
-            };
-
-            try {
-                await update(ref(database, `sessions/${currentSession}/participants/${newId}`), newParticipant);
-                addParticipantSessionModal.classList.add('hidden');
-                showToast(`${name} eklendi`, 'success');
-            } catch (error) {
-                alert('Katılımcı eklenirken hata: ' + error.message);
-            }
-        });
-
-        // Open Add Drink Modal
-        window.openAddDrinkModal = function(participantId) {
-            if (!isAdmin && participantId !== currentParticipantId) return;
-            
-            const participant = sessionData.participants[participantId];
-            if (!participant) return;
-            
-            document.getElementById('addDrinkForName').textContent = `${participant.name} için:`;
-            
-            // Update drink type datalist
-            const datalist = document.getElementById('drinkTypeList');
-            const drinkTypes = sessionData.drinkTypes || [];
-            datalist.innerHTML = drinkTypes.map(type => `<option value="${type}">`).join('');
-            
-            document.getElementById('drinkTypeInput').value = '';
-            document.getElementById('drinkQuantityInput').value = '1';
-            
-            pendingAction = { type: 'addDrink', participantId: participantId };
-            addDrinkModal.classList.remove('hidden');
-            document.getElementById('drinkTypeInput').focus();
-        };
-
-        document.getElementById('cancelAddDrink').addEventListener('click', () => {
-            addDrinkModal.classList.add('hidden');
-            pendingAction = null;
-        });
-
-        document.getElementById('drinkTypeInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('drinkQuantityInput').focus();
-            }
-        });
-
-        document.getElementById('drinkQuantityInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('confirmAddDrink').click();
-        });
-
-        document.getElementById('confirmAddDrink').addEventListener('click', async () => {
-            if (!pendingAction || pendingAction.type !== 'addDrink') return;
-
-            const drinkType = document.getElementById('drinkTypeInput').value.trim();
-            const quantity = parseInt(document.getElementById('drinkQuantityInput').value);
-            const participantId = pendingAction.participantId;
-
-            if (!drinkType || quantity < 1) {
-                alert('Lütfen geçerli bir içki türü ve miktar girin');
-                return;
-            }
-
-            const participant = sessionData.participants[participantId];
-            const existingDrinkType = sessionData.drinkTypes.find(d => d.toLowerCase() === drinkType.toLowerCase()) || drinkType;
-            
-            const updatedDrinks = { ...sessionData.drinks };
-            const updatedDrinkTypes = [...sessionData.drinkTypes];
-            const updatedHistory = { ...sessionData.drinkHistory };
-            const updatedUndo = [...(sessionData.undoStack || [])];
-
-            if (!updatedDrinkTypes.some(d => d.toLowerCase() === existingDrinkType.toLowerCase())) {
-                updatedDrinkTypes.push(existingDrinkType);
-            }
-
-            if (!updatedDrinks[participantId]) {
-                updatedDrinks[participantId] = {};
-            }
-            
-            const oldQuantity = updatedDrinks[participantId][existingDrinkType] || 0;
-            updatedDrinks[participantId][existingDrinkType] = oldQuantity + quantity;
-
-            if (!updatedHistory[participantId]) {
-                updatedHistory[participantId] = [];
-            }
-            
-            const timestamp = Date.now();
-            updatedHistory[participantId].push({
-                drink: existingDrinkType,
-                quantity: quantity,
-                timestamp: timestamp,
-                addedBy: isAdmin ? 'admin' : participantId
-            });
-
-            // Add to undo stack
-            updatedUndo.push({
-                action: 'addDrink',
-                participantId: participantId,
-                drink: existingDrinkType,
-                quantity: quantity,
-                timestamp: timestamp,
-                expiresAt: timestamp + 30000 // 30 seconds
-            });
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    drinks: updatedDrinks,
-                    drinkTypes: updatedDrinkTypes,
-                    drinkHistory: updatedHistory,
-                    undoStack: updatedUndo
-                });
-
-                // Add notification
-                const addedBy = isAdmin ? 'Yönetici' : participant.name;
-                const notificationMessage = `${addedBy} ${participant.name === addedBy ? '' : `${participant.name} için `}${quantity} ${existingDrinkType} ekledi`;
-                await addNotification(notificationMessage, 'info');
-
-                addDrinkModal.classList.add('hidden');
-                pendingAction = null;
-
-                // Notify admin if participant added
-                if (!isAdmin) {
-                    // Will be shown via Firebase listener
-                }
-            } catch (error) {
-                alert('İçki eklenirken hata: ' + error.message);
-            }
-        });
-
-        // Adjust Drink
-        window.adjustDrink = function(participantId, drinkType, change) {
-            if (!isAdmin && participantId !== currentParticipantId) return;
-
-            const participant = sessionData.participants[participantId];
-            const currentQty = sessionData.drinks[participantId]?.[drinkType] || 0;
-            const newQty = currentQty + change;
-
-            let message;
-            if (newQty <= 0) {
-                message = `${participant.name} için ${drinkType} silinecek. Devam edilsin mi?`;
-            } else if (change > 0) {
-                message = `${participant.name} için ${Math.abs(change)} adet daha ${drinkType} eklensin mi? (${currentQty} → ${newQty})`;
-            } else {
-                message = `${participant.name} için ${drinkType} miktarı ${currentQty}'den ${newQty}'e düşürülsün mü?`;
-            }
-
-            document.getElementById('adjustDrinkMessage').textContent = message;
-            pendingAction = { type: 'adjustDrink', participantId, drinkType, change };
-            adjustDrinkModal.classList.remove('hidden');
-        };
-
-        document.getElementById('cancelAdjustDrink').addEventListener('click', () => {
-            adjustDrinkModal.classList.add('hidden');
-            pendingAction = null;
-        });
-
-        document.getElementById('confirmAdjustDrink').addEventListener('click', async () => {
-            if (!pendingAction || pendingAction.type !== 'adjustDrink') return;
-
-            const { participantId, drinkType, change } = pendingAction;
-            
-            const updatedDrinks = { ...sessionData.drinks };
-            const updatedHistory = { ...sessionData.drinkHistory };
-            const updatedUndo = [...(sessionData.undoStack || [])];
-            const timestamp = Date.now();
-
-            const currentQty = updatedDrinks[participantId]?.[drinkType] || 0;
-            const newQty = currentQty + change;
-
-            if (change > 0) {
-                updatedDrinks[participantId][drinkType] = newQty;
-                
-                if (!updatedHistory[participantId]) {
-                    updatedHistory[participantId] = [];
-                }
-                updatedHistory[participantId].push({
-                    drink: drinkType,
-                    quantity: change,
-                    timestamp: timestamp,
-                    addedBy: isAdmin ? 'admin' : participantId
-                });
-
-                updatedUndo.push({
-                    action: 'adjustDrink',
-                    participantId: participantId,
-                    drink: drinkType,
-                    oldValue: currentQty,
-                    newValue: newQty,
-                    timestamp: timestamp,
-                    expiresAt: timestamp + 30000
-                });
-            } else {
-                // Decrease
-                if (newQty <= 0) {
-                    delete updatedDrinks[participantId][drinkType];
-                    if (Object.keys(updatedDrinks[participantId]).length === 0) {
-                        delete updatedDrinks[participantId];
-                    }
-                } else {
-                    updatedDrinks[participantId][drinkType] = newQty;
-                }
-
-                // Remove from history
-                if (updatedHistory[participantId]) {
-                    for (let i = updatedHistory[participantId].length - 1; i >= 0; i--) {
-                        if (updatedHistory[participantId][i].drink === drinkType) {
-                            updatedHistory[participantId].splice(i, 1);
-                            break;
-                        }
-                    }
-                    if (updatedHistory[participantId].length === 0) {
-                        delete updatedHistory[participantId];
-                    }
-                }
-
-                updatedUndo.push({
-                    action: 'adjustDrink',
-                    participantId: participantId,
-                    drink: drinkType,
-                    oldValue: currentQty,
-                    newValue: newQty,
-                    timestamp: timestamp,
-                    expiresAt: timestamp + 30000
-                });
-            }
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    drinks: updatedDrinks,
-                    drinkHistory: updatedHistory,
-                    undoStack: updatedUndo
-                });
-
-                adjustDrinkModal.classList.add('hidden');
-                pendingAction = null;
-            } catch (error) {
-                alert('Miktar ayarlanırken hata: ' + error.message);
-            }
-        });
-
-        // Delete Drink
-        window.deleteDrink = async function(participantId, drinkType) {
-            if (!isAdmin && participantId !== currentParticipantId) return;
-
-            const participant = sessionData.participants[participantId];
-            
-            // If participant is deleting their own drink, request admin approval
-            if (!isAdmin && participantId === currentParticipantId) {
-                const message = `${participant.name}, ${drinkType} silme isteği gönderdi`;
-                
-                try {
-                    await addNotification(message, 'warning');
-                    
-                    // Add to pending deletions
-                    const pendingDeletions = sessionData.pendingDeletions || {};
-                    const deleteId = `del_${Date.now()}`;
-                    pendingDeletions[deleteId] = {
-                        participantId: participantId,
-                        participantName: participant.name,
-                        drinkType: drinkType,
-                        requestedAt: Date.now(),
-                        requestedBy: participantId
-                    };
-                    
-                    await update(ref(database, `sessions/${currentSession}`), {
-                        pendingDeletions: pendingDeletions
-                    });
-                    
-                    showToast('Silme isteği admin onayına gönderildi', 'info');
-                } catch (error) {
-                    alert('İstek gönderilirken hata: ' + error.message);
-                }
-                return;
-            }
-            
-            // Admin can delete directly
-            document.getElementById('deleteDrinkMessage').textContent = 
-                `${participant.name} için ${drinkType} silinsin mi?`;
-            
-            pendingAction = { type: 'deleteDrink', participantId, drinkType };
-            deleteDrinkModal.classList.remove('hidden');
-        };
-
-        document.getElementById('cancelDeleteDrink').addEventListener('click', () => {
-            deleteDrinkModal.classList.add('hidden');
-            pendingAction = null;
-        });
-
-        document.getElementById('confirmDeleteDrink').addEventListener('click', async () => {
-            if (!pendingAction || pendingAction.type !== 'deleteDrink') return;
-
-            const { participantId, drinkType } = pendingAction;
-            
-            const updatedDrinks = { ...sessionData.drinks };
-            const updatedHistory = { ...sessionData.drinkHistory };
-            const updatedUndo = [...(sessionData.undoStack || [])];
-            const timestamp = Date.now();
-
-            const oldQuantity = updatedDrinks[participantId]?.[drinkType] || 0;
-
+    } else {
+        // Decrease
+        if (newQty <= 0) {
             delete updatedDrinks[participantId][drinkType];
             if (Object.keys(updatedDrinks[participantId]).length === 0) {
                 delete updatedDrinks[participantId];
             }
-
-            if (updatedHistory[participantId]) {
-                updatedHistory[participantId] = updatedHistory[participantId].filter(entry => entry.drink !== drinkType);
-                if (updatedHistory[participantId].length === 0) {
-                    delete updatedHistory[participantId];
-                }
-            }
-
-            updatedUndo.push({
-                action: 'deleteDrink',
-                participantId: participantId,
-                drink: drinkType,
-                oldValue: oldQuantity,
-                timestamp: timestamp,
-                expiresAt: timestamp + 30000
-            });
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    drinks: updatedDrinks,
-                    drinkHistory: updatedHistory,
-                    undoStack: updatedUndo
-                });
-
-                // Add notification
-                const participant = sessionData.participants[participantId];
-                await addNotification(`${participant.name} için ${drinkType} silindi`, 'error');
-
-                deleteDrinkModal.classList.add('hidden');
-                pendingAction = null;
-            } catch (error) {
-                alert('İçki silinirken hata: ' + error.message);
-            }
-        });
-
-        // Undo functionality
-        function canUndo() {
-            if (!sessionData.undoStack || sessionData.undoStack.length === 0) return false;
-            const now = Date.now();
-            return sessionData.undoStack.some(item => item.expiresAt > now);
+        } else {
+            updatedDrinks[participantId][drinkType] = newQty;
         }
 
-        window.undoLastAction = async function() {
-            if (!isAdmin || !canUndo()) return;
-
-            const now = Date.now();
-            const validItems = sessionData.undoStack.filter(item => item.expiresAt > now);
-            
-            if (validItems.length === 0) {
-                alert('Geri alınabilecek işlem yok');
-                return;
-            }
-
-            const lastAction = validItems[validItems.length - 1];
-            const participant = sessionData.participants[lastAction.participantId];
-            
-            if (!confirm(`Son işlem geri alınsın mı?\n${participant.name} - ${lastAction.drink} (${lastAction.action})`)) {
-                return;
-            }
-
-            const updatedDrinks = { ...sessionData.drinks };
-            const updatedHistory = { ...sessionData.drinkHistory };
-            const updatedUndo = sessionData.undoStack.filter(item => item !== lastAction);
-
-            if (lastAction.action === 'addDrink' || lastAction.action === 'adjustDrink') {
-                if (lastAction.oldValue !== undefined) {
-                    // Adjust drink
-                    if (lastAction.oldValue === 0) {
-                        delete updatedDrinks[lastAction.participantId][lastAction.drink];
-                        if (Object.keys(updatedDrinks[lastAction.participantId]).length === 0) {
-                            delete updatedDrinks[lastAction.participantId];
-                        }
-                    } else {
-                        if (!updatedDrinks[lastAction.participantId]) {
-                            updatedDrinks[lastAction.participantId] = {};
-                        }
-                        updatedDrinks[lastAction.participantId][lastAction.drink] = lastAction.oldValue;
-                    }
-                } else {
-                    // Add drink - remove it
-                    const currentQty = updatedDrinks[lastAction.participantId]?.[lastAction.drink] || 0;
-                    const newQty = currentQty - lastAction.quantity;
-                    
-                    if (newQty <= 0) {
-                        delete updatedDrinks[lastAction.participantId][lastAction.drink];
-                        if (Object.keys(updatedDrinks[lastAction.participantId]).length === 0) {
-                            delete updatedDrinks[lastAction.participantId];
-                        }
-                    } else {
-                        updatedDrinks[lastAction.participantId][lastAction.drink] = newQty;
-                    }
+        // Remove from history
+        if (updatedHistory[participantId]) {
+            for (let i = updatedHistory[participantId].length - 1; i >= 0; i--) {
+                if (updatedHistory[participantId][i].drink === drinkType) {
+                    updatedHistory[participantId].splice(i, 1);
+                    break;
                 }
+            }
+            if (updatedHistory[participantId].length === 0) {
+                delete updatedHistory[participantId];
+            }
+        }
 
-                // Remove from history
-                if (updatedHistory[lastAction.participantId]) {
-                    const historyIndex = updatedHistory[lastAction.participantId]
-                        .findIndex(h => h.timestamp === lastAction.timestamp && h.drink === lastAction.drink);
-                    if (historyIndex !== -1) {
-                        updatedHistory[lastAction.participantId].splice(historyIndex, 1);
-                        if (updatedHistory[lastAction.participantId].length === 0) {
-                            delete updatedHistory[lastAction.participantId];
-                        }
-                    }
+        updatedUndo.push({
+            action: 'adjustDrink',
+            participantId: participantId,
+            drink: drinkType,
+            oldValue: currentQty,
+            newValue: newQty,
+            timestamp: timestamp,
+            expiresAt: timestamp + 30000
+        });
+    }
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            drinks: updatedDrinks,
+            drinkHistory: updatedHistory,
+            undoStack: updatedUndo
+        });
+
+        adjustDrinkModal.classList.add('hidden');
+        pendingAction = null;
+    } catch (error) {
+        alert('Miktar ayarlanırken hata: ' + error.message);
+    }
+});
+
+// Delete Drink
+window.deleteDrink = async function(participantId, drinkType) {
+    if (!isAdmin && participantId !== currentParticipantId) return;
+
+    const participant = sessionData.participants[participantId];
+
+    // If participant is deleting their own drink, request admin approval
+    if (!isAdmin && participantId === currentParticipantId) {
+        const message = `${participant.name}, ${drinkType} silme isteği gönderdi`;
+
+        try {
+            await addNotification(message, 'warning');
+
+            // Add to pending deletions
+            const pendingDeletions = sessionData.pendingDeletions || {};
+            const deleteId = `del_${Date.now()}`;
+            pendingDeletions[deleteId] = {
+                participantId: participantId,
+                participantName: participant.name,
+                drinkType: drinkType,
+                requestedAt: Date.now(),
+                requestedBy: participantId
+            };
+
+            await update(ref(database, `sessions/${currentSession}`), {
+                pendingDeletions: pendingDeletions
+            });
+
+            showToast('Silme isteği admin onayına gönderildi', 'info');
+        } catch (error) {
+            alert('İstek gönderilirken hata: ' + error.message);
+        }
+        return;
+    }
+
+    // Admin can delete directly
+    document.getElementById('deleteDrinkMessage').textContent =
+        `${participant.name} için ${drinkType} silinsin mi?`;
+
+    pendingAction = { type: 'deleteDrink', participantId, drinkType };
+    deleteDrinkModal.classList.remove('hidden');
+};
+
+document.getElementById('cancelDeleteDrink').addEventListener('click', () => {
+    deleteDrinkModal.classList.add('hidden');
+    pendingAction = null;
+});
+
+document.getElementById('confirmDeleteDrink').addEventListener('click', async () => {
+    if (!pendingAction || pendingAction.type !== 'deleteDrink') return;
+
+    const { participantId, drinkType } = pendingAction;
+
+    const updatedDrinks = { ...sessionData.drinks };
+    const updatedHistory = { ...sessionData.drinkHistory };
+    const updatedUndo = [...(sessionData.undoStack || [])];
+    const timestamp = Date.now();
+
+    const oldQuantity = updatedDrinks[participantId]?.[drinkType] || 0;
+
+    delete updatedDrinks[participantId][drinkType];
+    if (Object.keys(updatedDrinks[participantId]).length === 0) {
+        delete updatedDrinks[participantId];
+    }
+
+    if (updatedHistory[participantId]) {
+        updatedHistory[participantId] = updatedHistory[participantId].filter(entry => entry.drink !== drinkType);
+        if (updatedHistory[participantId].length === 0) {
+            delete updatedHistory[participantId];
+        }
+    }
+
+    updatedUndo.push({
+        action: 'deleteDrink',
+        participantId: participantId,
+        drink: drinkType,
+        oldValue: oldQuantity,
+        timestamp: timestamp,
+        expiresAt: timestamp + 30000
+    });
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            drinks: updatedDrinks,
+            drinkHistory: updatedHistory,
+            undoStack: updatedUndo
+        });
+
+        // Add notification
+        const participant = sessionData.participants[participantId];
+        await addNotification(`${participant.name} için ${drinkType} silindi`, 'error');
+
+        deleteDrinkModal.classList.add('hidden');
+        pendingAction = null;
+    } catch (error) {
+        alert('İçki silinirken hata: ' + error.message);
+    }
+});
+
+// Undo functionality
+function canUndo() {
+    if (!sessionData.undoStack || sessionData.undoStack.length === 0) return false;
+    const now = Date.now();
+    return sessionData.undoStack.some(item => item.expiresAt > now);
+}
+
+window.undoLastAction = async function() {
+    if (!isAdmin || !canUndo()) return;
+
+    const now = Date.now();
+    const validItems = sessionData.undoStack.filter(item => item.expiresAt > now);
+
+    if (validItems.length === 0) {
+        alert('Geri alınabilecek işlem yok');
+        return;
+    }
+
+    const lastAction = validItems[validItems.length - 1];
+    const participant = sessionData.participants[lastAction.participantId];
+
+    if (!confirm(`Son işlem geri alınsın mı?\n${participant.name} - ${lastAction.drink} (${lastAction.action})`)) {
+        return;
+    }
+
+    const updatedDrinks = { ...sessionData.drinks };
+    const updatedHistory = { ...sessionData.drinkHistory };
+    const updatedUndo = sessionData.undoStack.filter(item => item !== lastAction);
+
+    if (lastAction.action === 'addDrink' || lastAction.action === 'adjustDrink') {
+        if (lastAction.oldValue !== undefined) {
+            // Adjust drink
+            if (lastAction.oldValue === 0) {
+                delete updatedDrinks[lastAction.participantId][lastAction.drink];
+                if (Object.keys(updatedDrinks[lastAction.participantId]).length === 0) {
+                    delete updatedDrinks[lastAction.participantId];
                 }
-            } else if (lastAction.action === 'deleteDrink') {
-                // Restore deleted drink
+            } else {
                 if (!updatedDrinks[lastAction.participantId]) {
                     updatedDrinks[lastAction.participantId] = {};
                 }
                 updatedDrinks[lastAction.participantId][lastAction.drink] = lastAction.oldValue;
             }
+        } else {
+            // Add drink - remove it
+            const currentQty = updatedDrinks[lastAction.participantId]?.[lastAction.drink] || 0;
+            const newQty = currentQty - lastAction.quantity;
 
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    drinks: updatedDrinks,
-                    drinkHistory: updatedHistory,
-                    undoStack: updatedUndo
-                });
-
-                showToast('İşlem geri alındı', 'success');
-            } catch (error) {
-                alert('Geri alma sırasında hata: ' + error.message);
-            }
-        };
-
-        // Admin actions
-        window.requestAdminAction = function(action) {
-            if (!isAdmin) return;
-            
-            pendingAdminAction = action;
-            
-            if (action === 'clearAll') {
-                document.getElementById('adminCodeMessage').textContent = 'Tüm içkileri silmek için admin kodunu girin:';
-            } else if (action === 'endSession') {
-                document.getElementById('adminCodeMessage').textContent = 'Oturumu sonlandırmak için admin kodunu girin:';
-            }
-            
-            document.getElementById('adminCodeInput').value = '';
-            adminCodeModal.classList.remove('hidden');
-            document.getElementById('adminCodeInput').focus();
-        };
-
-        document.getElementById('cancelAdminCode').addEventListener('click', () => {
-            adminCodeModal.classList.add('hidden');
-            pendingAdminAction = null;
-        });
-
-        document.getElementById('adminCodeInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('confirmAdminCode').click();
-        });
-
-        document.getElementById('confirmAdminCode').addEventListener('click', async () => {
-            const enteredCode = document.getElementById('adminCodeInput').value.trim();
-            
-            if (enteredCode !== adminCode) {
-                alert('Yanlış admin kodu');
-                return;
-            }
-
-            adminCodeModal.classList.add('hidden');
-
-            if (pendingAdminAction === 'clearAll') {
-                if (!confirm('Tüm içkiler silinecek. Emin misiniz?')) {
-                    pendingAdminAction = null;
-                    return;
+            if (newQty <= 0) {
+                delete updatedDrinks[lastAction.participantId][lastAction.drink];
+                if (Object.keys(updatedDrinks[lastAction.participantId]).length === 0) {
+                    delete updatedDrinks[lastAction.participantId];
                 }
-
-                try {
-                    await update(ref(database, `sessions/${currentSession}`), {
-                        drinks: {},
-                        drinkHistory: {},
-                        undoStack: []
-                    });
-                    showToast('Tüm veriler silindi', 'warning');
-                } catch (error) {
-                    alert('Veri silinirken hata: ' + error.message);
-                }
-            } else if (pendingAdminAction === 'endSession') {
-                if (!confirm('Bu oturumu herkes için sonlandıracak. Emin misiniz?')) {
-                    pendingAdminAction = null;
-                    return;
-                }
-
-                try {
-                    await remove(ref(database, `sessions/${currentSession}`));
-                    leaveSession();
-                } catch (error) {
-                    alert('Oturum sonlandırılırken hata: ' + error.message);
-                }
+            } else {
+                updatedDrinks[lastAction.participantId][lastAction.drink] = newQty;
             }
-
-            pendingAdminAction = null;
-        });
-
-        // Approve deletion request
-        window.approveDeletion = async function(deleteId) {
-            if (!isAdmin) return;
-
-            const pendingDeletions = { ...(sessionData.pendingDeletions || {}) };
-            const deletion = pendingDeletions[deleteId];
-            
-            if (!deletion) return;
-
-            const { participantId, drinkType, participantName } = deletion;
-            
-            const updatedDrinks = { ...sessionData.drinks };
-            const updatedHistory = { ...sessionData.drinkHistory };
-
-            // Delete the drink
-            if (updatedDrinks[participantId] && updatedDrinks[participantId][drinkType]) {
-                delete updatedDrinks[participantId][drinkType];
-                if (Object.keys(updatedDrinks[participantId]).length === 0) {
-                    delete updatedDrinks[participantId];
-                }
-            }
-
-            if (updatedHistory[participantId]) {
-                updatedHistory[participantId] = updatedHistory[participantId].filter(entry => entry.drink !== drinkType);
-                if (updatedHistory[participantId].length === 0) {
-                    delete updatedHistory[participantId];
-                }
-            }
-
-            // Remove from pending
-            delete pendingDeletions[deleteId];
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    drinks: updatedDrinks,
-                    drinkHistory: updatedHistory,
-                    pendingDeletions: pendingDeletions
-                });
-
-                await addNotification(`${participantName} için ${drinkType} silme isteği onaylandı`, 'success');
-                showToast('Silme isteği onaylandı', 'success');
-                updateApprovalCount();
-                renderApprovals();
-            } catch (error) {
-                alert('Onaylama sırasında hata: ' + error.message);
-            }
-        };
-
-        // Reject deletion request
-        window.rejectDeletion = async function(deleteId) {
-            if (!isAdmin) return;
-
-            const pendingDeletions = { ...(sessionData.pendingDeletions || {}) };
-            const deletion = pendingDeletions[deleteId];
-            
-            if (!deletion) return;
-
-            delete pendingDeletions[deleteId];
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    pendingDeletions: pendingDeletions
-                });
-
-                await addNotification(`${deletion.participantName} için ${deletion.drinkType} silme isteği reddedildi`, 'warning');
-                showToast('Silme isteği reddedildi', 'warning');
-                updateApprovalCount();
-                renderApprovals();
-            } catch (error) {
-                alert('Reddetme sırasında hata: ' + error.message);
-            }
-        };
-
-        // Remove participant (admin only)
-        window.removeParticipant = async function(participantId) {
-            if (!isAdmin) {
-                alert('Sadece yönetici katılımcı çıkarabilir');
-                return;
-            }
-
-            const participant = sessionData.participants[participantId];
-            if (!participant) return;
-
-            if (!confirm(`${participant.name} oturumdan çıkarılsın mı?`)) {
-                return;
-            }
-
-            try {
-                // Set participant as inactive instead of deleting
-                await update(ref(database, `sessions/${currentSession}/participants/${participantId}`), {
-                    isActive: false
-                });
-
-                showToast(`${participant.name} çıkarıldı`, 'warning');
-            } catch (error) {
-                alert('Katılımcı çıkarılırken hata: ' + error.message);
-            }
-        };
-
-        // Leave session
-        window.leaveSession = function() {
-            if (confirm('Bu oturumdan ayrılmak istediğinize emin misiniz?')) {
-                leaveSession();
-            }
-        };
-
-        function leaveSession() {
-            currentSession = null;
-            isAdmin = false;
-            adminCode = null;
-            currentParticipantId = null;
-            sessionData = {
-                participants: {},
-                drinks: {},
-                drinkTypes: [],
-                drinkHistory: {},
-                undoStack: [],
-                notifications: []
-            };
-            
-            localStorage.removeItem('currentSession');
-            localStorage.removeItem('isAdmin');
-            localStorage.removeItem('adminCode');
-            localStorage.removeItem('currentParticipantId');
-            
-            showSessionManagement();
         }
 
-        // Auto-refresh every 30 seconds
-        setInterval(() => {
-            if (currentSession) {
-                renderMainContent();
-            }
-        }, 30000);
-
-        // Check for attention-needed participants every 5 minutes (admin only)
-        let lastAttentionCheck = Date.now();
-        setInterval(() => {
-            if (!isAdmin || !currentSession) return;
-            
-            const now = Date.now();
-            const participants = sessionData.participants || {};
-            
-            Object.entries(participants).forEach(([pid, participant]) => {
-                if (!participant.isActive) return;
-                
-                const needsAttention = checkIfNeedsAttention(pid, now);
-                if (needsAttention) {
-                    // Only notify once every 15 minutes per participant
-                    const lastNotified = localStorage.getItem(`attention_${pid}`) || 0;
-                    if (now - lastNotified > 15 * 60 * 1000) {
-                        const message = `${participant.name} kontrole ihtiyaç duyuyor`;
-                        showToast(message, 'warning');
-                        showBrowserNotification('⚠️ Kontrol Gerekli', message);
-                        localStorage.setItem(`attention_${pid}`, now.toString());
-                    }
+        // Remove from history
+        if (updatedHistory[lastAction.participantId]) {
+            const historyIndex = updatedHistory[lastAction.participantId]
+                .findIndex(h => h.timestamp === lastAction.timestamp && h.drink === lastAction.drink);
+            if (historyIndex !== -1) {
+                updatedHistory[lastAction.participantId].splice(historyIndex, 1);
+                if (updatedHistory[lastAction.participantId].length === 0) {
+                    delete updatedHistory[lastAction.participantId];
                 }
+            }
+        }
+    } else if (lastAction.action === 'deleteDrink') {
+        // Restore deleted drink
+        if (!updatedDrinks[lastAction.participantId]) {
+            updatedDrinks[lastAction.participantId] = {};
+        }
+        updatedDrinks[lastAction.participantId][lastAction.drink] = lastAction.oldValue;
+    }
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            drinks: updatedDrinks,
+            drinkHistory: updatedHistory,
+            undoStack: updatedUndo
+        });
+
+        showToast('İşlem geri alındı', 'success');
+    } catch (error) {
+        alert('Geri alma sırasında hata: ' + error.message);
+    }
+};
+
+// Admin actions
+window.requestAdminAction = function(action) {
+    if (!isAdmin) return;
+
+    pendingAdminAction = action;
+
+    // FIX 1: Bypass admin code for endSession if adminUserId matches current userId
+    if (action === 'endSession' && sessionData.adminUserId === userId) {
+        // Skip modal and proceed directly to confirmation/execution
+        window.confirmAdminCode();
+        return;
+    }
+
+    if (action === 'clearAll') {
+        document.getElementById('adminCodeMessage').textContent = 'Tüm içkileri silmek için admin kodunu girin:';
+    } else if (action === 'endSession') {
+        document.getElementById('adminCodeMessage').textContent = 'Oturumu sonlandırmak için admin kodunu girin:';
+    }
+
+    document.getElementById('adminCodeInput').value = '';
+    adminCodeModal.classList.remove('hidden');
+    document.getElementById('adminCodeInput').focus();
+};
+
+document.getElementById('cancelAdminCode').addEventListener('click', () => {
+    adminCodeModal.classList.add('hidden');
+    pendingAdminAction = null;
+});
+
+document.getElementById('adminCodeInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('confirmAdminCode').click();
+});
+
+document.getElementById('confirmAdminCode').addEventListener('click', async () => {
+    const enteredCode = document.getElementById('adminCodeInput').value.trim();
+
+    if (enteredCode !== adminCode) {
+        alert('Yanlış admin kodu');
+        return;
+    }
+
+    adminCodeModal.classList.add('hidden');
+
+    await executeAdminAction();
+});
+
+// Consolidated function to execute admin actions
+window.confirmAdminCode = async function() {
+    if (!isAdmin) return;
+
+    if (pendingAdminAction === 'clearAll') {
+        if (!confirm('Tüm içkiler silinecek. Emin misiniz?')) {
+            pendingAdminAction = null;
+            return;
+        }
+
+        try {
+            await update(ref(database, `sessions/${currentSession}`), {
+                drinks: {},
+                drinkHistory: {},
+                undoStack: []
             });
-        }, 5 * 60 * 1000); // Every 5 minutes
-    </script>
-</body>
-</html>
+            showToast('Tüm veriler silindi', 'warning');
+        } catch (error) {
+            alert('Veri silinirken hata: ' + error.message);
+        }
+    } else if (pendingAdminAction === 'endSession') {
+        if (!confirm('Bu oturumu herkes için sonlandıracak. Emin misiniz?')) {
+            pendingAdminAction = null;
+            return;
+        }
+
+        try {
+            await remove(ref(database, `sessions/${currentSession}`));
+            leaveSession();
+        } catch (error) {
+            alert('Oturum sonlandırılırken hata: ' + error.message);
+        }
+    }
+
+    pendingAdminAction = null;
+}
+
+// Approve deletion request
+window.approveDeletion = async function(deleteId) {
+    if (!isAdmin) return;
+
+    const pendingDeletions = { ...(sessionData.pendingDeletions || {}) };
+    const deletion = pendingDeletions[deleteId];
+
+    if (!deletion) return;
+
+    const { participantId, drinkType, participantName } = deletion;
+
+    const updatedDrinks = { ...sessionData.drinks };
+    const updatedHistory = { ...sessionData.drinkHistory };
+
+    // Delete the drink
+    if (updatedDrinks[participantId] && updatedDrinks[participantId][drinkType]) {
+        delete updatedDrinks[participantId][drinkType];
+        if (Object.keys(updatedDrinks[participantId]).length === 0) {
+            delete updatedDrinks[participantId];
+        }
+    }
+
+    if (updatedHistory[participantId]) {
+        updatedHistory[participantId] = updatedHistory[participantId].filter(entry => entry.drink !== drinkType);
+        if (updatedHistory[participantId].length === 0) {
+            delete updatedHistory[participantId];
+        }
+    }
+
+    // Remove from pending
+    delete pendingDeletions[deleteId];
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            drinks: updatedDrinks,
+            drinkHistory: updatedHistory,
+            pendingDeletions: pendingDeletions
+        });
+
+        await addNotification(`${participantName} için ${drinkType} silme isteği onaylandı`, 'success');
+        showToast('Silme isteği onaylandı', 'success');
+        updateApprovalCount();
+        renderApprovals();
+    } catch (error) {
+        alert('Onaylama sırasında hata: ' + error.message);
+    }
+};
+
+// Reject deletion request
+window.rejectDeletion = async function(deleteId) {
+    if (!isAdmin) return;
+
+    const pendingDeletions = { ...(sessionData.pendingDeletions || {}) };
+    const deletion = pendingDeletions[deleteId];
+
+    if (!deletion) return;
+
+    delete pendingDeletions[deleteId];
+
+    try {
+        await update(ref(database, `sessions/${currentSession}`), {
+            pendingDeletions: pendingDeletions
+        });
+
+        await addNotification(`${deletion.participantName} için ${deletion.drinkType} silme isteği reddedildi`, 'warning');
+        showToast('Silme isteği reddedildi', 'warning');
+        updateApprovalCount();
+        renderApprovals();
+    } catch (error) {
+        alert('Reddetme sırasında hata: ' + error.message);
+    }
+};
+
+// Remove participant (admin only)
+window.removeParticipant = async function(participantId) {
+    if (!isAdmin) {
+        alert('Sadece yönetici katılımcı çıkarabilir');
+        return;
+    }
+
+    const participant = sessionData.participants[participantId];
+    if (!participant) return;
+
+    if (!confirm(`${participant.name} oturumdan çıkarılsın mı?`)) {
+        return;
+    }
+
+    try {
+        // Set participant as inactive instead of deleting
+        await update(ref(database, `sessions/${currentSession}/participants/${participantId}`), {
+            isActive: false
+        });
+
+        showToast(`${participant.name} çıkarıldı`, 'warning');
+    } catch (error) {
+        alert('Katılımcı çıkarılırken hata: ' + error.message);
+    }
+};
+
+// Leave session
+window.leaveSession = function() {
+    if (confirm('Bu oturumdan ayrılmak istediğinize emin misiniz?')) {
+        _leaveSession();
+    }
+};
+
+function _leaveSession() {
+    currentSession = null;
+    isAdmin = false;
+    adminCode = null;
+    currentParticipantId = null;
+    sessionData = {
+        participants: {},
+        drinks: {},
+        drinkTypes: [],
+        drinkHistory: {},
+        undoStack: [],
+        notifications: []
+    };
+
+    localStorage.removeItem('currentSession');
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('adminCode');
+    localStorage.removeItem('currentParticipantId');
+
+    showSessionManagement();
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    if (currentSession) {
+        renderMainContent();
+    }
+}, 30000);
+
+// Check for attention-needed participants every 5 minutes (admin only)
+let lastAttentionCheck = Date.now();
+setInterval(() => {
+    if (!isAdmin || !currentSession) return;
+
+    const now = Date.now();
+    const participants = sessionData.participants || {};
+
+    Object.entries(participants).forEach(([pid, participant]) => {
+        if (!participant.isActive) return;
+
+        const needsAttention = checkIfNeedsAttention(pid, now);
+        if (needsAttention) {
+            // Only notify once every 15 minutes per participant
+            const lastNotified = localStorage.getItem(`attention_${pid}`) || 0;
+            if (now - lastNotified > 15 * 60 * 1000) {
+                const message = `${participant.name} kontrole ihtiyaç duyuyor`;
+                showToast(message, 'warning');
+                showBrowserNotification('⚠️ Kontrol Gerekli', message);
+                localStorage.setItem(`attention_${pid}`, now.toString());
+            }
+        }
+    });
+}, 5 * 60 * 1000); // Every 5 minutes
