@@ -852,8 +852,19 @@
             sessionManagement.classList.add('hidden');
             sessionInfo.classList.remove('hidden');
             sessionCodeDisplay.textContent = currentSession;
-            sessionRole.textContent = isAdmin ? 'Yönetici' : sessionData.participants[currentParticipantId]?.name || 'Katılımcı';
-            sessionRole.className = isAdmin ? 'session-role admin' : 'session-role';
+            
+            // Count active participants
+            const activeCount = sessionData.participants ? 
+                Object.values(sessionData.participants).filter(p => p.isActive).length : 0;
+            
+            if (isAdmin) {
+                sessionRole.textContent = `Yönetici (${activeCount} kişi)`;
+                sessionRole.className = 'session-role admin';
+            } else {
+                const participantName = sessionData.participants?.[currentParticipantId]?.name || 'Katılımcı';
+                sessionRole.textContent = participantName;
+                sessionRole.className = 'session-role';
+            }
         }
 
         // Create Session - Open Modal
@@ -1118,7 +1129,15 @@
 
             // Render participants
             const now = Date.now();
-            Object.entries(sessionData.participants).forEach(([pid, participant]) => {
+            const participants = sessionData.participants || {};
+            
+            if (Object.keys(participants).length === 0) {
+                html += '<div class="empty-state">Henüz katılımcı yok. + Katılımcı Ekle butonuna tıklayın!</div>';
+                mainContent.innerHTML = html;
+                return;
+            }
+            
+            Object.entries(participants).forEach(([pid, participant]) => {
                 if (!participant.isActive) return;
 
                 const isSelf = pid === currentParticipantId;
