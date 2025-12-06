@@ -1145,6 +1145,9 @@
                 const stats = getParticipantStats(pid, now);
                 const drinks = (sessionData.drinks && sessionData.drinks[pid]) ? sessionData.drinks[pid] : {};
                 const canEdit = isAdmin || isSelf;
+                
+                // Safely get drink entries
+                const drinkEntries = drinks && typeof drinks === 'object' ? Object.entries(drinks) : [];
 
                 html += `
                     <div class="participant-card ${needsAttention ? 'needs-attention' : ''}">
@@ -1156,10 +1159,13 @@
                                     ${stats.avgTimeInfo}
                                 </div>
                             </div>
-                            ${needsAttention ? '<span class="attention-badge">⚠️ Check In</span>' : ''}
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                ${needsAttention ? '<span class="attention-badge">⚠️ Check In</span>' : ''}
+                                ${isAdmin ? `<button class="btn-icon btn-delete" onclick="window.removeParticipant('${pid}')" title="Katılımcıyı Çıkar">✕</button>` : ''}
+                            </div>
                         </div>
                         
-                        ${Object.keys(drinks).length > 0 ? Object.entries(drinks).map(([drinkType, quantity]) => `
+                        ${drinkEntries.length > 0 ? drinkEntries.map(([drinkType, quantity]) => `
                             <div class="drink-item">
                                 <div class="drink-info">
                                     <span class="drink-name">${drinkType}</span>
@@ -1756,6 +1762,32 @@
 
             pendingAdminAction = null;
         });
+
+        // Remove participant (admin only)
+        window.removeParticipant = async function(participantId) {
+            if (!isAdmin) {
+                alert('Sadece yönetici katılımcı çıkarabilir');
+                return;
+            }
+
+            const participant = sessionData.participants[participantId];
+            if (!participant) return;
+
+            if (!confirm(`${participant.name} oturumdan çıkarılsın mı?`)) {
+                return;
+            }
+
+            try {
+                // Set participant as inactive instead of deleting
+                await update(ref(database, `sessions/${currentSession}/participants/${participantId}`), {
+                    isActive: false
+                });
+
+                showToast(`${participant.name} çıkarıldı`, 'warning');
+            } catch (error) {
+                alert('Katılımcı çıkarılırken hata: ' + error.message);
+            }
+        };
 
         // Leave session
         window.leaveSession = function() {
