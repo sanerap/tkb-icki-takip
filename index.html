@@ -1107,7 +1107,18 @@
                 }
 
                 const data = snapshot.val();
-                sessionData = data;
+                
+                // Ensure all required fields exist with defaults
+                sessionData = {
+                    participants: data.participants || {},
+                    drinks: data.drinks || {},
+                    drinkTypes: data.drinkTypes || [],
+                    drinkHistory: data.drinkHistory || {},
+                    undoStack: data.undoStack || [],
+                    adminCode: data.adminCode,
+                    adminUserId: data.adminUserId,
+                    createdAt: data.createdAt
+                };
                 
                 showSessionInfo();
                 renderMainContent();
@@ -1326,11 +1337,14 @@
             if (!isAdmin && participantId !== currentParticipantId) return;
             
             const participant = sessionData.participants[participantId];
+            if (!participant) return;
+            
             document.getElementById('addDrinkForName').textContent = `${participant.name} için:`;
             
             // Update drink type datalist
             const datalist = document.getElementById('drinkTypeList');
-            datalist.innerHTML = sessionData.drinkTypes.map(type => `<option value="${type}">`).join('');
+            const drinkTypes = sessionData.drinkTypes || [];
+            datalist.innerHTML = drinkTypes.map(type => `<option value="${type}">`).join('');
             
             document.getElementById('drinkTypeInput').value = '';
             document.getElementById('drinkQuantityInput').value = '1';
