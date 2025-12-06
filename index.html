@@ -778,23 +778,38 @@
                 return false;
             }
 
+            console.log('Current notification permission:', Notification.permission);
+
             if (Notification.permission === 'granted') {
                 notificationsEnabled = true;
+                console.log('Notifications already granted');
                 return true;
             }
 
             if (Notification.permission !== 'denied') {
                 const permission = await Notification.requestPermission();
                 notificationsEnabled = permission === 'granted';
+                console.log('Permission request result:', permission, 'notificationsEnabled:', notificationsEnabled);
                 return notificationsEnabled;
             }
 
+            console.log('Notifications denied');
             return false;
         }
 
         // Show browser notification
         function showBrowserNotification(title, body, options = {}) {
-            if (!notificationsEnabled) return;
+            console.log('showBrowserNotification called:', {
+                title,
+                body,
+                notificationsEnabled,
+                permission: Notification.permission
+            });
+            
+            if (!notificationsEnabled) {
+                console.warn('Notifications not enabled');
+                return;
+            }
 
             const notification = new Notification(title, {
                 body: body,
@@ -804,6 +819,8 @@
                 requireInteraction: false,
                 ...options
             });
+
+            console.log('Notification created:', notification);
 
             // Auto close after 5 seconds
             setTimeout(() => notification.close(), 5000);
@@ -1943,13 +1960,26 @@
             // Participant: Listen for drinks added to them by admin
             const historyRef = ref(database, `sessions/${currentSession}/drinkHistory/${currentParticipantId}`);
             onValue(historyRef, (snapshot) => {
-                if (!snapshot.exists()) return;
+                if (!snapshot.exists()) {
+                    console.log('No history exists for participant');
+                    return;
+                }
                 
                 const entries = snapshot.val();
                 const now = Date.now();
                 
-                entries.forEach(entry => {
-                    if (entry.timestamp > lastNotificationTime && entry.addedBy === 'admin') {
+                console.log('Participant notification check:', {
+                    participantId: currentParticipantId,
+                    entries: entries,
+                    lastNotificationTime: lastNotificationTime
+                });
+                
+                // Convert to array if it's an object
+                const entriesArray = Array.isArray(entries) ? entries : Object.values(entries);
+                
+                entriesArray.forEach(entry => {
+                    if (entry && entry.timestamp > lastNotificationTime && entry.addedBy === 'admin') {
+                        console.log('Sending notification for entry:', entry);
                         const message = `Yönetici sizin için ${entry.quantity} ${entry.drink} ekledi`;
                         showToast(message, 'info');
                         showBrowserNotification('İçki Eklendi 🍺', message);
