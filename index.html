@@ -682,6 +682,7 @@
         <div id="tabNavigation" class="tab-navigation hidden">
             <button class="tab-btn active" id="mainTab">Ana Sayfa</button>
             <button class="tab-btn" id="notificationsTab">Bildirimler <span class="notification-badge hidden" id="notificationCount">0</span></button>
+            <button class="tab-btn" id="approvalsTab">Onaylar <span class="notification-badge hidden" id="approvalCount">0</span></button>
         </div>
 
         <!-- Session Management (shown when not in a session) -->
@@ -695,6 +696,9 @@
 
         <!-- Notifications Content -->
         <div id="notificationsContent" class="hidden"></div>
+
+        <!-- Approvals Content -->
+        <div id="approvalsContent" class="hidden"></div>
     </div>
 
     <!-- Credits -->
@@ -1017,10 +1021,13 @@
         const sessionRole = document.getElementById('sessionRole');
         const mainContent = document.getElementById('mainContent');
         const notificationsContent = document.getElementById('notificationsContent');
+        const approvalsContent = document.getElementById('approvalsContent');
         const tabNavigation = document.getElementById('tabNavigation');
         const mainTab = document.getElementById('mainTab');
         const notificationsTab = document.getElementById('notificationsTab');
+        const approvalsTab = document.getElementById('approvalsTab');
         const notificationCount = document.getElementById('notificationCount');
+        const approvalCount = document.getElementById('approvalCount');
 
         // Modal elements
         const createSessionModal = document.getElementById('createSessionModal');
@@ -1072,16 +1079,30 @@
         mainTab.addEventListener('click', () => {
             mainTab.classList.add('active');
             notificationsTab.classList.remove('active');
+            approvalsTab.classList.remove('active');
             mainContent.classList.remove('hidden');
             notificationsContent.classList.add('hidden');
+            approvalsContent.classList.add('hidden');
         });
 
         notificationsTab.addEventListener('click', () => {
             notificationsTab.classList.add('active');
             mainTab.classList.remove('active');
+            approvalsTab.classList.remove('active');
             notificationsContent.classList.remove('hidden');
             mainContent.classList.add('hidden');
+            approvalsContent.classList.add('hidden');
             renderNotifications();
+        });
+
+        approvalsTab.addEventListener('click', () => {
+            approvalsTab.classList.add('active');
+            mainTab.classList.remove('active');
+            notificationsTab.classList.remove('active');
+            approvalsContent.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+            notificationsContent.classList.add('hidden');
+            renderApprovals();
         });
 
         // Add notification to session
@@ -1174,6 +1195,54 @@
             }
         }
 
+        // Update approval count badge
+        function updateApprovalCount() {
+            const count = Object.keys(sessionData.pendingDeletions || {}).length;
+            if (count > 0) {
+                approvalCount.textContent = count;
+                approvalCount.classList.remove('hidden');
+            } else {
+                approvalCount.classList.add('hidden');
+            }
+        }
+
+        // Render approvals
+        function renderApprovals() {
+            if (!isAdmin) {
+                approvalsContent.innerHTML = '<div class="empty-notifications">Sadece yönetici onayları görebilir</div>';
+                return;
+            }
+
+            const pendingDeletions = sessionData.pendingDeletions || {};
+            const deletionEntries = Object.entries(pendingDeletions);
+            
+            if (deletionEntries.length === 0) {
+                approvalsContent.innerHTML = '<div class="empty-notifications">Onay bekleyen işlem yok</div>';
+                return;
+            }
+
+            let html = '';
+            deletionEntries.forEach(([deleteId, deletion]) => {
+                const timeAgo = getTimeAgo(deletion.requestedAt);
+                html += `
+                    <div class="pending-approval">
+                        <div style="margin-bottom: 10px;">
+                            <div class="pending-approval-text" style="font-size: 16px; margin-bottom: 5px;">
+                                ${deletion.participantName} - ${deletion.drinkType} silmek istiyor
+                            </div>
+                            <div style="color: #6c757d; font-size: 12px;">${timeAgo}</div>
+                        </div>
+                        <div class="pending-approval-actions">
+                            <button class="btn-success" onclick="window.approveDeletion('${deleteId}')">✓ Onayla</button>
+                            <button class="btn-danger" onclick="window.rejectDeletion('${deleteId}')">✕ Reddet</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            approvalsContent.innerHTML = html;
+        }
+
         function initializeApp() {
             // Request notification permission on app load
             requestNotificationPermission();
@@ -1191,6 +1260,7 @@
             tabNavigation.classList.add('hidden');
             mainContent.innerHTML = '';
             notificationsContent.innerHTML = '';
+            approvalsContent.innerHTML = '';
         }
 
         function showSessionInfo() {
@@ -1213,6 +1283,12 @@
             }
 
             updateNotificationCount();
+            if (isAdmin) {
+                updateApprovalCount();
+                approvalsTab.classList.remove('hidden');
+            } else {
+                approvalsTab.classList.add('hidden');
+            }
         }
 
         // Create Session - Open Modal
@@ -1474,6 +1550,9 @@
                 showSessionInfo();
                 renderMainContent();
                 updateNotificationCount();
+                if (isAdmin) {
+                    updateApprovalCount();
+                }
             });
         }
 
@@ -1548,30 +1627,6 @@
                     </div>
                 `;
             });
-
-            // Pending deletion requests (admin only)
-            if (isAdmin) {
-                const pendingDeletions = sessionData.pendingDeletions || {};
-                const deletionEntries = Object.entries(pendingDeletions);
-                
-                if (deletionEntries.length > 0) {
-                    html += '<div style="margin-top: 20px;"><h3 style="color: #ffc107; margin-bottom: 10px;">Onay Bekleyen Silme İstekleri:</h3>';
-                    deletionEntries.forEach(([deleteId, deletion]) => {
-                        html += `
-                            <div class="pending-approval">
-                                <div class="pending-approval-text">
-                                    ${deletion.participantName} - ${deletion.drinkType} silmek istiyor
-                                </div>
-                                <div class="pending-approval-actions">
-                                    <button class="btn-success" onclick="window.approveDeletion('${deleteId}')">✓ Onayla</button>
-                                    <button class="btn-danger" onclick="window.rejectDeletion('${deleteId}')">✕ Reddet</button>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    html += '</div>';
-                }
-            }
 
             // Admin controls at bottom
             if (isAdmin) {
@@ -2234,6 +2289,8 @@
 
                 await addNotification(`${participantName} için ${drinkType} silme isteği onaylandı`, 'success');
                 showToast('Silme isteği onaylandı', 'success');
+                updateApprovalCount();
+                renderApprovals();
             } catch (error) {
                 alert('Onaylama sırasında hata: ' + error.message);
             }
@@ -2257,6 +2314,8 @@
 
                 await addNotification(`${deletion.participantName} için ${deletion.drinkType} silme isteği reddedildi`, 'warning');
                 showToast('Silme isteği reddedildi', 'warning');
+                updateApprovalCount();
+                renderApprovals();
             } catch (error) {
                 alert('Reddetme sırasında hata: ' + error.message);
             }
@@ -2315,71 +2374,6 @@
             localStorage.removeItem('currentParticipantId');
             
             showSessionManagement();
-        }
-
-        // Listen for changes and notify admin
-        let lastNotificationTime = Date.now();
-        
-        if (isAdmin) {
-            const historyRef = ref(database, `sessions/${currentSession}/drinkHistory`);
-            onValue(historyRef, (snapshot) => {
-                if (!snapshot.exists()) return;
-                
-                const history = snapshot.val();
-                const now = Date.now();
-                
-                // Check for recent additions by participants
-                Object.entries(history).forEach(([participantId, entries]) => {
-                    if (participantId === 'admin') return;
-                    
-                    const participant = sessionData.participants[participantId];
-                    if (!participant) return;
-                    
-                    entries.forEach(entry => {
-                        if (entry.timestamp > lastNotificationTime && entry.addedBy !== 'admin') {
-                            const message = `${participant.name} ${entry.quantity} ${entry.drink} ekledi`;
-                            showToast(message, 'info');
-                            
-                            // Show browser notification
-                            showBrowserNotification('İçki Eklendi 🍺', message);
-                        }
-                    });
-                });
-                
-                lastNotificationTime = now;
-            });
-        } else if (currentParticipantId) {
-            // Participant: Listen for drinks added to them by admin
-            const historyRef = ref(database, `sessions/${currentSession}/drinkHistory/${currentParticipantId}`);
-            onValue(historyRef, (snapshot) => {
-                if (!snapshot.exists()) {
-                    console.log('No history exists for participant');
-                    return;
-                }
-                
-                const entries = snapshot.val();
-                const now = Date.now();
-                
-                console.log('Participant notification check:', {
-                    participantId: currentParticipantId,
-                    entries: entries,
-                    lastNotificationTime: lastNotificationTime
-                });
-                
-                // Convert to array if it's an object
-                const entriesArray = Array.isArray(entries) ? entries : Object.values(entries);
-                
-                entriesArray.forEach(entry => {
-                    if (entry && entry.timestamp > lastNotificationTime && entry.addedBy === 'admin') {
-                        console.log('Sending notification for entry:', entry);
-                        const message = `Yönetici sizin için ${entry.quantity} ${entry.drink} ekledi`;
-                        showToast(message, 'info');
-                        showBrowserNotification('İçki Eklendi 🍺', message);
-                    }
-                });
-                
-                lastNotificationTime = now;
-            });
         }
 
         // Auto-refresh every 30 seconds
