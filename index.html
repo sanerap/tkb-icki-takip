@@ -1878,7 +1878,7 @@
             if (isAdmin) {
                 html += `
                     <div class="admin-controls">
-                        <button class="btn-primary" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
+                        <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
                         <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Kodu Göster</button>
                     </div>
                 `;
@@ -1960,7 +1960,7 @@
                             </div>
                         `}).join('') : '<div class="empty-state" style="padding: 10px 0; font-size: 14px;">Henüz içki eklenmedi</div>'}
                         
-                        ${canEdit ? `<button class="btn-primary add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
+                        ${canEdit ? `<button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
                     </div>
                 `;
             });
