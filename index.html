@@ -945,40 +945,26 @@
         // Request notification permission
         async function requestNotificationPermission() {
             if (!('Notification' in window)) {
-                console.log('This browser does not support notifications');
                 return false;
             }
 
-            console.log('Current notification permission:', Notification.permission);
-
             if (Notification.permission === 'granted') {
                 notificationsEnabled = true;
-                console.log('Notifications already granted');
                 return true;
             }
 
             if (Notification.permission !== 'denied') {
                 const permission = await Notification.requestPermission();
                 notificationsEnabled = permission === 'granted';
-                console.log('Permission request result:', permission, 'notificationsEnabled:', notificationsEnabled);
                 return notificationsEnabled;
             }
 
-            console.log('Notifications denied');
             return false;
         }
 
         // Show browser notification
         function showBrowserNotification(title, body, options = {}) {
-            console.log('showBrowserNotification called:', {
-                title,
-                body,
-                notificationsEnabled,
-                permission: Notification.permission
-            });
-            
             if (!notificationsEnabled) {
-                console.warn('Notifications not enabled');
                 return;
             }
 
@@ -990,8 +976,6 @@
                 requireInteraction: false,
                 ...options
             });
-
-            console.log('Notification created:', notification);
 
             // Auto close after 5 seconds
             setTimeout(() => notification.close(), 5000);
@@ -1025,7 +1009,7 @@
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.5);
             } catch (e) {
-                console.log('Could not play sound:', e);
+                // Silently fail if audio not supported
             }
         }
 
@@ -1144,12 +1128,8 @@
         // Add notification to specific user(s)
         // targetUserIds: array of userIds, or 'all' for everyone, or 'admin' for admin only
         async function addNotification(message, type = 'info', targetUserIds = 'all') {
-            const notification = {
-                id: Date.now() + Math.random(), // Ensure unique ID
-                message: message,
-                type: type,
-                timestamp: Date.now()
-            };
+            const baseId = Date.now();
+            const timestamp = Date.now();
 
             const notifications = { ...(sessionData.notifications || {}) };
             
@@ -1172,11 +1152,21 @@
                 userIdsToNotify.push(targetUserIds);
             }
 
-            // Add notification to each user's list
-            userIdsToNotify.forEach(uid => {
+            // Remove duplicates
+            userIdsToNotify = [...new Set(userIdsToNotify)];
+
+            // Add notification to each user's list with unique ID
+            userIdsToNotify.forEach((uid, index) => {
                 if (!notifications[uid]) {
                     notifications[uid] = [];
                 }
+                // Create unique notification for each user
+                const notification = {
+                    id: baseId + index,  // Unique ID per user
+                    message: message,
+                    type: type,
+                    timestamp: timestamp
+                };
                 notifications[uid].push(notification);
             });
 
@@ -1433,12 +1423,12 @@
             const name = input.value.trim();
             
             if (!name) {
-                alert('Lütfen bir isim girin');
+                showToast('Lütfen bir isim girin', 'warning');
                 return;
             }
 
             if (tempParticipants.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-                alert('Bu isim zaten eklendi');
+                showToast('Bu isim zaten eklendi', 'warning');
                 return;
             }
 
@@ -1596,7 +1586,7 @@
             const code = document.getElementById('joinSessionCodeInput').value.trim().toUpperCase();
             
             if (!code) {
-                alert('Lütfen bir oturum kodu girin');
+                showToast('Lütfen bir oturum kodu girin', 'warning');
                 return;
             }
 
@@ -1605,7 +1595,7 @@
                 const snapshot = await get(sessionRef);
                 
                 if (!snapshot.exists()) {
-                    alert('Oturum bulunamadı. Lütfen kodu kontrol edip tekrar deneyin.');
+                    showToast('Oturum bulunamadı. Lütfen kodu kontrol edin.', 'error');
                     return;
                 }
 
@@ -1639,7 +1629,7 @@
             const participantId = document.getElementById('participantSelect').value;
             
             if (!participantId) {
-                alert('Lütfen bir katılımcı seçin');
+                showToast('Lütfen bir katılımcı seçin', 'warning');
                 return;
             }
 
@@ -1671,8 +1661,8 @@
             
             onValue(sessionRef, (snapshot) => {
                 if (!snapshot.exists()) {
-                    alert('Oturum sonlandırıldı.');
-                    leaveSession();
+                    showToast('Oturum sonlandırıldı', 'error');
+                    setTimeout(() => leaveSession(), 2000);
                     return;
                 }
 
@@ -1886,7 +1876,7 @@
             const name = document.getElementById('newParticipantNameInput').value.trim();
             
             if (!name) {
-                alert('Lütfen bir isim girin');
+                showToast('Lütfen bir isim girin', 'warning');
                 return;
             }
 
@@ -1963,7 +1953,7 @@
             const participantId = pendingAction.participantId;
 
             if (!drinkType || quantity < 1) {
-                alert('Lütfen geçerli bir içki türü ve miktar girin');
+                showToast('Lütfen geçerli bir içki türü ve miktar girin', 'warning');
                 return;
             }
 
