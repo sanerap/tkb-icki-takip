@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TKB İçki Takibi</title>
+    <title>Akbank TKB İçki Takibi</title>
     <!-- Version 1.0 -->
     <style>
         * {
@@ -793,7 +793,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🍺 TKB İçki Takibi</h1>
+        <h1>🍺 Akbank TKB İçki Takibi</h1>
         
         <!-- Connection Status -->
         <div id="connectionStatus" class="connection-status"></div>
@@ -809,9 +809,9 @@
 
         <!-- Tab Navigation -->
         <div id="tabNavigation" class="tab-navigation hidden">
-            <button class="tab-btn active" id="mainTab">Ana Sayfa</button>
-            <button class="tab-btn" id="notificationsTab">Bildirimler <span class="notification-badge hidden" id="notificationCount">0</span></button>
-            <button class="tab-btn" id="approvalsTab">Onaylar <span class="notification-badge hidden" id="approvalCount">0</span></button>
+            <button class="tab-btn active" id="mainTab">🏠 Ana Sayfa</button>
+            <button class="tab-btn" id="notificationsTab">🔔 Bildirimler <span class="notification-badge hidden" id="notificationCount">0</span></button>
+            <button class="tab-btn" id="approvalsTab">✅ Onaylar <span class="notification-badge hidden" id="approvalCount">0</span></button>
             <button class="tab-btn" id="statsTab">📊 İstatistikler</button>
         </div>
 
@@ -834,9 +834,15 @@
         <div id="statsContent" class="hidden"></div>
     </div>
 
-    <!-- Credits -->
+    <!-- Akbank Branding & Credits -->
     <div class="credits">
-        💻 Saner Apaydın tarafından geliştirilmiştir.
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 5px;">
+            <span style="background: linear-gradient(135deg, #c41e3a 0%, #e63946 100%); padding: 4px 12px; border-radius: 6px; font-weight: 700; font-size: 16px; color: white; letter-spacing: 0.5px;">AKBANK</span>
+            <span style="color: #b0b0b0; font-weight: 600;">TKB</span>
+        </div>
+        <div style="font-size: 12px; color: #888;">
+            💻 Saner Apaydın tarafından geliştirilmiştir.
+        </div>
     </div>
 
     <!-- Create Session Modal -->
