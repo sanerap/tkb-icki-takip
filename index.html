@@ -1034,7 +1034,7 @@
             drinkTypes: [],
             drinkHistory: {},
             undoStack: [],
-            notifications: [],
+            notifications: {},  // Changed: { userId: [...notifications] }
             pendingDeletions: {},
             pendingAdjustments: {}
         };
@@ -1136,16 +1136,44 @@
         });
 
         // Add notification to session
-        async function addNotification(message, type = 'info') {
+        // Add notification to specific user(s)
+        // targetUserIds: array of userIds, or 'all' for everyone, or 'admin' for admin only
+        async function addNotification(message, type = 'info', targetUserIds = 'all') {
             const notification = {
-                id: Date.now(),
+                id: Date.now() + Math.random(), // Ensure unique ID
                 message: message,
                 type: type,
                 timestamp: Date.now()
             };
 
-            const notifications = sessionData.notifications || [];
-            notifications.push(notification);
+            const notifications = { ...(sessionData.notifications || {}) };
+            
+            // Determine which users should receive this notification
+            let userIdsToNotify = [];
+            
+            if (targetUserIds === 'all') {
+                // Send to admin and all participants
+                userIdsToNotify.push(sessionData.adminUserId);
+                Object.values(sessionData.participants || {}).forEach(p => {
+                    if (p.userId) {
+                        userIdsToNotify.push(p.userId);
+                    }
+                });
+            } else if (targetUserIds === 'admin') {
+                userIdsToNotify.push(sessionData.adminUserId);
+            } else if (Array.isArray(targetUserIds)) {
+                userIdsToNotify = targetUserIds;
+            } else {
+                userIdsToNotify.push(targetUserIds);
+            }
+
+            // Add notification to each user's list
+            userIdsToNotify.forEach(uid => {
+                if (!notifications[uid]) {
+                    notifications[uid] = [];
+                }
+                notifications[uid].push(notification);
+            });
 
             try {
                 await update(ref(database, `sessions/${currentSession}`), {
@@ -1158,15 +1186,17 @@
 
         // Render notifications
         function renderNotifications() {
-            const notifications = sessionData.notifications || [];
+            // Get notifications for current user
+            const allNotifications = sessionData.notifications || {};
+            const userNotifications = allNotifications[userId] || [];
             
-            if (notifications.length === 0) {
+            if (userNotifications.length === 0) {
                 notificationsContent.innerHTML = '<div class="empty-notifications">Henüz bildirim yok</div>';
                 return;
             }
 
             // Sort by timestamp, newest first
-            const sortedNotifications = [...notifications].sort((a, b) => b.timestamp - a.timestamp);
+            const sortedNotifications = [...userNotifications].sort((a, b) => b.timestamp - a.timestamp);
 
             let html = '';
             sortedNotifications.forEach(notification => {
@@ -1178,7 +1208,7 @@
                             <div class="notification-message">${notification.message}</div>
                             <div class="notification-time">${formattedTime} • ${timeAgo}</div>
                         </div>
-                        ${isAdmin ? `<button class="notification-delete" onclick="window.deleteNotification(${notification.id})">✕</button>` : ''}
+                        <button class="notification-delete" onclick="window.deleteNotification(${notification.id})">✕</button>
                     </div>
                 `;
             });
@@ -1188,8 +1218,6 @@
 
         // Delete notification with animation
         window.deleteNotification = async function(notificationId) {
-            if (!isAdmin) return;
-
             const notifElement = document.getElementById(`notif-${notificationId}`);
             if (notifElement) {
                 // Step 1: Slide right and fade out
@@ -1208,7 +1236,11 @@
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
 
-            const notifications = (sessionData.notifications || []).filter(n => n.id !== notificationId);
+            // Remove notification only from current user's list
+            const notifications = { ...(sessionData.notifications || {}) };
+            if (notifications[userId]) {
+                notifications[userId] = notifications[userId].filter(n => n.id !== notificationId);
+            }
 
             try {
                 await update(ref(database, `sessions/${currentSession}`), {
@@ -1243,7 +1275,10 @@
 
         // Update notification count badge
         function updateNotificationCount() {
-            const count = (sessionData.notifications || []).length;
+            const allNotifications = sessionData.notifications || {};
+            const userNotifications = allNotifications[userId] || [];
+            const count = userNotifications.length;
+            
             if (count > 0) {
                 notificationCount.textContent = count;
                 notificationCount.classList.remove('hidden');
@@ -1486,7 +1521,7 @@
                 drinkTypes: [],
                 drinkHistory: {},
                 undoStack: [],
-                notifications: [],
+                notifications: {},  // Object with userId keys
                 pendingDeletions: {},
                 pendingAdjustments: {}
             };
@@ -1645,7 +1680,7 @@
                     drinkTypes: data.drinkTypes || [],
                     drinkHistory: data.drinkHistory || {},
                     undoStack: data.undoStack || [],
-                    notifications: data.notifications || [],
+                    notifications: data.notifications || {},  // Object with userId keys
                     pendingDeletions: data.pendingDeletions || {},
                     pendingAdjustments: data.pendingAdjustments || {},
                     adminCode: data.adminCode,
@@ -2652,7 +2687,7 @@
                 drinkTypes: [],
                 drinkHistory: {},
                 undoStack: [],
-                notifications: [],
+                notifications: {},  // Object with userId keys
                 pendingDeletions: {},
                 pendingAdjustments: {}
             };
