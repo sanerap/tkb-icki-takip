@@ -493,31 +493,6 @@
             font-size: 14px;
         }
 
-        .undo-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        .undo-btn:hover {
-            background: #5a6268;
-        }
-
-        .undo-btn:disabled {
-            background: #3a3a3a;
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-
         .tab-navigation {
             display: flex;
             gap: 10px;
@@ -1198,6 +1173,16 @@
             const sortedNotifications = [...userNotifications].sort((a, b) => a.timestamp - b.timestamp);
 
             let html = '';
+            
+            // Add Clear All button at top
+            html += `
+                <div style="margin-bottom: 15px; text-align: right;">
+                    <button class="btn-danger" onclick="window.clearAllNotifications()" style="font-size: 14px; padding: 8px 15px;">
+                        🗑️ Tümünü Sil
+                    </button>
+                </div>
+            `;
+            
             sortedNotifications.forEach(notification => {
                 const timeAgo = getTimeAgo(notification.timestamp);
                 const formattedTime = getFormattedTime(notification.timestamp);
@@ -1249,6 +1234,81 @@
                 alert('Bildirim silinirken hata: ' + error.message);
             }
         };
+
+        // Clear all notifications
+        window.clearAllNotifications = async function() {
+            const userNotifications = (sessionData.notifications || {})[userId] || [];
+            
+            if (userNotifications.length === 0) return;
+            
+            if (!confirm(`${userNotifications.length} bildirimin tümünü silmek istediğinize emin misiniz?`)) {
+                return;
+            }
+
+            const notifications = { ...(sessionData.notifications || {}) };
+            notifications[userId] = [];
+
+            try {
+                await update(ref(database, `sessions/${currentSession}`), {
+                    notifications: notifications
+                });
+                showToast('Tüm bildirimler silindi', 'success');
+            } catch (error) {
+                showToast('Bildirimler silinirken hata oluştu', 'error');
+            }
+        };
+
+        // Generate welcome notifications for new participants
+        async function generateWelcomeNotifications() {
+            try {
+                const sessionRef = ref(database, `sessions/${currentSession}`);
+                const snapshot = await get(sessionRef);
+                const data = snapshot.val();
+                
+                const participants = data.participants || {};
+                const drinks = data.drinks || {};
+                const notifications = { ...(data.notifications || {}) };
+                
+                if (!notifications[userId]) {
+                    notifications[userId] = [];
+                }
+                
+                // Add welcome message
+                const baseId = Date.now();
+                let notifIndex = 0;
+                
+                notifications[userId].push({
+                    id: baseId + notifIndex++,
+                    message: '🎉 Oturuma hoş geldiniz! Mevcut durum:',
+                    type: 'info',
+                    timestamp: Date.now()
+                });
+                
+                // Add notifications for each participant's drinks
+                Object.entries(participants).forEach(([pid, participant]) => {
+                    if (!participant.isActive) return;
+                    
+                    const participantDrinks = drinks[pid];
+                    if (participantDrinks && Object.keys(participantDrinks).length > 0) {
+                        Object.entries(participantDrinks).forEach(([drinkType, quantity]) => {
+                            notifications[userId].push({
+                                id: baseId + notifIndex++,
+                                message: `${participant.name}: ${quantity} ${drinkType}`,
+                                type: 'info',
+                                timestamp: Date.now()
+                            });
+                        });
+                    }
+                });
+                
+                // Save notifications
+                await update(sessionRef, {
+                    notifications: notifications
+                });
+            } catch (error) {
+                console.error('Failed to generate welcome notifications:', error);
+            }
+        }
 
         // Get time ago string
         function getTimeAgo(timestamp) {
@@ -1651,6 +1711,10 @@
                 localStorage.removeItem('adminCode');
 
                 selectParticipantModal.classList.add('hidden');
+                
+                // Generate welcome notifications for existing drinks
+                await generateWelcomeNotifications();
+                
                 loadSession(currentSession);
                 
                 showToast(`Oturuma katıldınız!`, 'success');
@@ -1711,7 +1775,6 @@
                 html += `
                     <div class="admin-controls">
                         <button class="btn-primary" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
-                        <button class="undo-btn" onclick="window.undoLastAction()" ${!canUndo() ? 'disabled' : ''}>↶ Geri Al</button>
                         <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Kodu Göster</button>
                     </div>
                 `;
@@ -2305,95 +2368,6 @@
         });
 
         // Undo functionality
-        function canUndo() {
-            if (!sessionData.undoStack || sessionData.undoStack.length === 0) return false;
-            const now = Date.now();
-            return sessionData.undoStack.some(item => item.expiresAt > now);
-        }
-
-        window.undoLastAction = async function() {
-            if (!isAdmin || !canUndo()) return;
-
-            const now = Date.now();
-            const validItems = sessionData.undoStack.filter(item => item.expiresAt > now);
-            
-            if (validItems.length === 0) {
-                alert('Geri alınabilecek işlem yok');
-                return;
-            }
-
-            const lastAction = validItems[validItems.length - 1];
-            const participant = sessionData.participants[lastAction.participantId];
-            
-            if (!confirm(`Son işlem geri alınsın mı?\n${participant.name} - ${lastAction.drink} (${lastAction.action})`)) {
-                return;
-            }
-
-            const updatedDrinks = { ...sessionData.drinks };
-            const updatedHistory = { ...sessionData.drinkHistory };
-            const updatedUndo = sessionData.undoStack.filter(item => item !== lastAction);
-
-            if (lastAction.action === 'addDrink' || lastAction.action === 'adjustDrink') {
-                if (lastAction.oldValue !== undefined) {
-                    // Adjust drink
-                    if (lastAction.oldValue === 0) {
-                        delete updatedDrinks[lastAction.participantId][lastAction.drink];
-                        if (Object.keys(updatedDrinks[lastAction.participantId]).length === 0) {
-                            delete updatedDrinks[lastAction.participantId];
-                        }
-                    } else {
-                        if (!updatedDrinks[lastAction.participantId]) {
-                            updatedDrinks[lastAction.participantId] = {};
-                        }
-                        updatedDrinks[lastAction.participantId][lastAction.drink] = lastAction.oldValue;
-                    }
-                } else {
-                    // Add drink - remove it
-                    const currentQty = updatedDrinks[lastAction.participantId]?.[lastAction.drink] || 0;
-                    const newQty = currentQty - lastAction.quantity;
-                    
-                    if (newQty <= 0) {
-                        delete updatedDrinks[lastAction.participantId][lastAction.drink];
-                        if (Object.keys(updatedDrinks[lastAction.participantId]).length === 0) {
-                            delete updatedDrinks[lastAction.participantId];
-                        }
-                    } else {
-                        updatedDrinks[lastAction.participantId][lastAction.drink] = newQty;
-                    }
-                }
-
-                // Remove from history
-                if (updatedHistory[lastAction.participantId]) {
-                    const historyIndex = updatedHistory[lastAction.participantId]
-                        .findIndex(h => h.timestamp === lastAction.timestamp && h.drink === lastAction.drink);
-                    if (historyIndex !== -1) {
-                        updatedHistory[lastAction.participantId].splice(historyIndex, 1);
-                        if (updatedHistory[lastAction.participantId].length === 0) {
-                            delete updatedHistory[lastAction.participantId];
-                        }
-                    }
-                }
-            } else if (lastAction.action === 'deleteDrink') {
-                // Restore deleted drink
-                if (!updatedDrinks[lastAction.participantId]) {
-                    updatedDrinks[lastAction.participantId] = {};
-                }
-                updatedDrinks[lastAction.participantId][lastAction.drink] = lastAction.oldValue;
-            }
-
-            try {
-                await update(ref(database, `sessions/${currentSession}`), {
-                    drinks: updatedDrinks,
-                    drinkHistory: updatedHistory,
-                    undoStack: updatedUndo
-                });
-
-                showToast('İşlem geri alındı', 'success');
-            } catch (error) {
-                alert('Geri alma sırasında hata: ' + error.message);
-            }
-        };
-
         // Admin actions
         window.requestAdminAction = function(action) {
             if (!isAdmin) return;
