@@ -802,6 +802,9 @@
         <div id="sessionInfo" class="session-info hidden">
             <div class="session-code" id="sessionCodeDisplay"></div>
             <div class="session-role" id="sessionRole"></div>
+            <button class="btn-primary" onclick="window.showQRCode()" style="margin-top: 10px; padding: 8px 12px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                📱 QR Paylaş
+            </button>
         </div>
 
         <!-- Tab Navigation -->
@@ -1396,6 +1399,13 @@
 
         // Initialize app
         initializeApp();
+
+        // Periodic refresh for main content (to update "needs attention" highlights in real-time)
+        setInterval(() => {
+            if (currentSession && activeTab === 'main') {
+                renderMainContent();
+            }
+        }, 30000); // Every 30 seconds
 
         // Tab Navigation
         mainTab.addEventListener('click', () => {
@@ -3184,7 +3194,7 @@
         // Show admin code
         // Show QR Code Modal (Public sharing)
         window.showQRCode = function() {
-            if (!isAdmin) return;
+            // Everyone can share QR code now!
             
             document.getElementById('showSessionCodeQR').textContent = currentSession;
             
