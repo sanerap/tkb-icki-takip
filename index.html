@@ -2657,6 +2657,13 @@
 
             // If participant is decreasing their own drink, request admin approval
             if (!isAdmin && participantId === currentParticipantId && change < 0) {
+                // First, ask for confirmation from the participant
+                const confirmMessage = `${drinkType} miktarını azaltmak istiyor musunuz? (${currentQty} → ${newQty})\n\nBu istek admin onayına gönderilecek.`;
+                
+                if (!confirm(confirmMessage)) {
+                    return; // User cancelled
+                }
+                
                 const message = `${participant.name}, ${drinkType} azaltma isteği gönderdi (${currentQty} → ${newQty})`;
                 
                 try {
