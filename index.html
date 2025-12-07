@@ -1008,19 +1008,37 @@
         </div>
     </div>
 
-    <!-- Show Admin Code Modal -->
-    <div id="showAdminCodeModal" class="modal-overlay hidden">
+    <!-- QR Code Share Modal (Public) -->
+    <div id="qrCodeModal" class="modal-overlay hidden">
         <div class="modal">
-            <div class="modal-title">🔑 Oturum Bilgileri</div>
+            <div class="modal-title">📱 Oturuma Davet</div>
             <div class="modal-message">
-                Bu bilgileri paylaşarak arkadaşlarınızı davet edin!
+                QR kodu taratarak hemen katılabilirler!
             </div>
             
             <!-- QR Code -->
             <div style="text-align: center; margin: 20px 0;">
-                <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">QR Kod ile Katıl:</div>
                 <div id="qrCodeContainer" style="background: white; padding: 20px; border-radius: 12px; display: inline-block;"></div>
-                <div style="margin-top: 10px; color: #b0b0b0; font-size: 12px;">Telefonla tarat, hemen katıl!</div>
+                <div style="margin-top: 10px; color: #b0b0b0; font-size: 12px;">Kamera ile tarat → Anında katıl!</div>
+            </div>
+            
+            <div class="admin-code-display">
+                <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">Oturum Kodu:</div>
+                <strong id="showSessionCodeQR" style="font-size: 28px; color: #4a90e2;"></strong>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn-primary" id="closeQRCode">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Show Admin Code Modal (Private) -->
+    <div id="showAdminCodeModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-title">🔑 Admin Bilgileri</div>
+            <div class="modal-message" style="color: #ff9800;">
+                ⚠️ Bu bilgileri GİZLİ tutun! Sadece güvendiğiniz kişilerle paylaşın.
             </div>
             
             <div class="admin-code-display">
@@ -1029,7 +1047,7 @@
             </div>
             <div class="admin-code-display">
                 <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">Admin Kodu:</div>
-                <strong id="showAdminCodeValue" style="font-size: 28px;"></strong>
+                <strong id="showAdminCodeValue" style="font-size: 28px; color: #dc3545;"></strong>
             </div>
             <div class="modal-buttons">
                 <button class="btn-primary btn-secondary" id="copyAdminInfo">📋 Kopyala</button>
@@ -2234,6 +2252,8 @@
                     renderNotifications();
                 } else if (activeTab === 'approvals') {
                     renderApprovals();
+                } else if (activeTab === 'stats') {
+                    renderStats();
                 }
             });
         }
@@ -2246,7 +2266,8 @@
                 html += `
                     <div class="admin-controls">
                         <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
-                        <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Kodu Göster</button>
+                        <button class="btn-primary" onclick="window.showQRCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">📱 QR Paylaş</button>
+                        <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Admin Kodu</button>
                     </div>
                 `;
             }
@@ -3154,11 +3175,11 @@
         };
 
         // Show admin code
-        window.showAdminCode = function() {
+        // Show QR Code Modal (Public sharing)
+        window.showQRCode = function() {
             if (!isAdmin) return;
             
-            document.getElementById('showSessionCode').textContent = currentSession;
-            document.getElementById('showAdminCodeValue').textContent = adminCode;
+            document.getElementById('showSessionCodeQR').textContent = currentSession;
             
             // Generate QR Code
             const qrContainer = document.getElementById('qrCodeContainer');
@@ -3176,8 +3197,23 @@
                 correctLevel: QRCode.CorrectLevel.H
             });
             
+            document.getElementById('qrCodeModal').classList.remove('hidden');
+        };
+
+        // Show Admin Code Modal (Private - admin only)
+        window.showAdminCode = function() {
+            if (!isAdmin) return;
+            
+            document.getElementById('showSessionCode').textContent = currentSession;
+            document.getElementById('showAdminCodeValue').textContent = adminCode;
             document.getElementById('showAdminCodeModal').classList.remove('hidden');
         };
+
+        // Close show admin code modal
+        // Close QR code modal
+        document.getElementById('closeQRCode').addEventListener('click', () => {
+            document.getElementById('qrCodeModal').classList.add('hidden');
+        });
 
         // Close show admin code modal
         document.getElementById('closeShowAdminCode').addEventListener('click', () => {
