@@ -1131,47 +1131,51 @@
             const baseId = Date.now();
             const timestamp = Date.now();
 
-            const notifications = { ...(sessionData.notifications || {}) };
-            
-            // Determine which users should receive this notification
-            let userIdsToNotify = [];
-            
-            if (targetUserIds === 'all') {
-                // Send to admin and all participants
-                userIdsToNotify.push(sessionData.adminUserId);
-                Object.values(sessionData.participants || {}).forEach(p => {
-                    if (p.userId) {
-                        userIdsToNotify.push(p.userId);
-                    }
-                });
-            } else if (targetUserIds === 'admin') {
-                userIdsToNotify.push(sessionData.adminUserId);
-            } else if (Array.isArray(targetUserIds)) {
-                userIdsToNotify = targetUserIds;
-            } else {
-                userIdsToNotify.push(targetUserIds);
-            }
-
-            // Remove duplicates
-            userIdsToNotify = [...new Set(userIdsToNotify)];
-
-            // Add notification to each user's list with unique ID
-            userIdsToNotify.forEach((uid, index) => {
-                if (!notifications[uid]) {
-                    notifications[uid] = [];
-                }
-                // Create unique notification for each user
-                const notification = {
-                    id: baseId + index,  // Unique ID per user
-                    message: message,
-                    type: type,
-                    timestamp: timestamp
-                };
-                notifications[uid].push(notification);
-            });
-
             try {
-                await update(ref(database, `sessions/${currentSession}`), {
+                // Read current notifications from Firebase to avoid duplicates
+                const sessionRef = ref(database, `sessions/${currentSession}`);
+                const snapshot = await get(sessionRef);
+                const data = snapshot.val();
+                const notifications = { ...(data.notifications || {}) };
+                
+                // Determine which users should receive this notification
+                let userIdsToNotify = [];
+                
+                if (targetUserIds === 'all') {
+                    // Send to admin and all participants
+                    userIdsToNotify.push(data.adminUserId);
+                    Object.values(data.participants || {}).forEach(p => {
+                        if (p.userId) {
+                            userIdsToNotify.push(p.userId);
+                        }
+                    });
+                } else if (targetUserIds === 'admin') {
+                    userIdsToNotify.push(data.adminUserId);
+                } else if (Array.isArray(targetUserIds)) {
+                    userIdsToNotify = targetUserIds;
+                } else {
+                    userIdsToNotify.push(targetUserIds);
+                }
+
+                // Remove duplicates
+                userIdsToNotify = [...new Set(userIdsToNotify)];
+
+                // Add notification to each user's list with unique ID
+                userIdsToNotify.forEach((uid, index) => {
+                    if (!notifications[uid]) {
+                        notifications[uid] = [];
+                    }
+                    // Create unique notification for each user
+                    const notification = {
+                        id: baseId + index,  // Unique ID per user
+                        message: message,
+                        type: type,
+                        timestamp: timestamp
+                    };
+                    notifications[uid].push(notification);
+                });
+
+                await update(sessionRef, {
                     notifications: notifications
                 });
             } catch (error) {
