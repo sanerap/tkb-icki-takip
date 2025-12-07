@@ -569,6 +569,9 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            transition: all 0.3s ease-out;
+            overflow: hidden;
+            max-height: 200px;
         }
 
         .notification-item.warning {
@@ -1187,14 +1190,21 @@
         window.deleteNotification = async function(notificationId) {
             if (!isAdmin) return;
 
-            // Add fade-out animation
             const notifElement = document.getElementById(`notif-${notificationId}`);
             if (notifElement) {
-                notifElement.style.transition = 'all 0.3s ease-out';
+                // Step 1: Slide right and fade out
                 notifElement.style.opacity = '0';
                 notifElement.style.transform = 'translateX(100%)';
                 
-                // Wait for animation to complete
+                // Wait for slide animation
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Step 2: Collapse height and margin
+                notifElement.style.maxHeight = '0';
+                notifElement.style.marginBottom = '0';
+                notifElement.style.padding = '0';
+                
+                // Wait for collapse animation
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
 
@@ -2112,6 +2122,21 @@
                     drinkHistory: updatedHistory,
                     undoStack: updatedUndo
                 });
+
+                // Add notification
+                const participant = sessionData.participants[participantId];
+                const addedBy = isAdmin ? 'Yönetici' : participant.name;
+                let notificationMessage;
+                
+                if (change > 0) {
+                    notificationMessage = `${addedBy} ${participant.name === addedBy ? '' : `${participant.name} için `}${drinkType} artırdı (${currentQty} → ${newQty})`;
+                } else if (newQty <= 0) {
+                    notificationMessage = `${addedBy} ${participant.name === addedBy ? '' : `${participant.name} için `}${drinkType} sildi`;
+                } else {
+                    notificationMessage = `${addedBy} ${participant.name === addedBy ? '' : `${participant.name} için `}${drinkType} azalttı (${currentQty} → ${newQty})`;
+                }
+                
+                await addNotification(notificationMessage, change > 0 ? 'info' : 'warning');
 
                 adjustDrinkModal.classList.add('hidden');
                 pendingAction = null;
