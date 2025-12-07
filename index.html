@@ -749,7 +749,10 @@
             <div class="modal-message" style="font-size: 12px; color: #b0b0b0;">
                 Ekran görüntüsü alın veya not edin. Verileri silmek veya oturumu sonlandırmak için admin koduna ihtiyacınız olacak.
             </div>
-            <button class="btn-primary" id="closeSessionCreatedModal">Anladım!</button>
+            <div class="modal-buttons">
+                <button class="btn-primary btn-secondary" id="copyNewSessionInfo">📋 Kopyala</button>
+                <button class="btn-primary" id="closeSessionCreatedModal">Anladım!</button>
+            </div>
         </div>
     </div>
 
@@ -855,6 +858,28 @@
             <div class="modal-buttons">
                 <button class="btn-cancel" id="cancelAdminCode">İptal</button>
                 <button class="btn-primary" id="confirmAdminCode">Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Show Admin Code Modal -->
+    <div id="showAdminCodeModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-title">🔑 Admin Bilgileri</div>
+            <div class="modal-message">
+                Bu bilgileri güvenli bir yerde saklayın!
+            </div>
+            <div class="admin-code-display">
+                <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">Oturum Kodu:</div>
+                <strong id="showSessionCode" style="font-size: 28px; color: #4a90e2;"></strong>
+            </div>
+            <div class="admin-code-display">
+                <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">Admin Kodu:</div>
+                <strong id="showAdminCodeValue" style="font-size: 28px;"></strong>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary btn-secondary" id="copyAdminInfo">📋 Kopyala</button>
+                <button class="btn-primary" id="closeShowAdminCode">Kapat</button>
             </div>
         </div>
     </div>
@@ -1006,7 +1031,9 @@
             drinkTypes: [],
             drinkHistory: {},
             undoStack: [],
-            notifications: []  // New: Persistent notifications
+            notifications: [],
+            pendingDeletions: {},
+            pendingAdjustments: {}
         };
 
         // Temporary data for session creation
@@ -1141,11 +1168,12 @@
             let html = '';
             sortedNotifications.forEach(notification => {
                 const timeAgo = getTimeAgo(notification.timestamp);
+                const formattedTime = getFormattedTime(notification.timestamp);
                 html += `
-                    <div class="notification-item ${notification.type}">
+                    <div class="notification-item ${notification.type}" id="notif-${notification.id}">
                         <div class="notification-content">
                             <div class="notification-message">${notification.message}</div>
-                            <div class="notification-time">${timeAgo}</div>
+                            <div class="notification-time">${formattedTime} • ${timeAgo}</div>
                         </div>
                         ${isAdmin ? `<button class="notification-delete" onclick="window.deleteNotification(${notification.id})">✕</button>` : ''}
                     </div>
@@ -1155,9 +1183,20 @@
             notificationsContent.innerHTML = html;
         }
 
-        // Delete notification
+        // Delete notification with animation
         window.deleteNotification = async function(notificationId) {
             if (!isAdmin) return;
+
+            // Add fade-out animation
+            const notifElement = document.getElementById(`notif-${notificationId}`);
+            if (notifElement) {
+                notifElement.style.transition = 'all 0.3s ease-out';
+                notifElement.style.opacity = '0';
+                notifElement.style.transform = 'translateX(100%)';
+                
+                // Wait for animation to complete
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
 
             const notifications = (sessionData.notifications || []).filter(n => n.id !== notificationId);
 
@@ -1184,6 +1223,14 @@
             return `${days} gün önce`;
         }
 
+        // Get formatted time (HH:MM)
+        function getFormattedTime(timestamp) {
+            const date = new Date(timestamp);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
         // Update notification count badge
         function updateNotificationCount() {
             const count = (sessionData.notifications || []).length;
@@ -1197,9 +1244,12 @@
 
         // Update approval count badge
         function updateApprovalCount() {
-            const count = Object.keys(sessionData.pendingDeletions || {}).length;
-            if (count > 0) {
-                approvalCount.textContent = count;
+            const deletionCount = Object.keys(sessionData.pendingDeletions || {}).length;
+            const adjustmentCount = Object.keys(sessionData.pendingAdjustments || {}).length;
+            const totalCount = deletionCount + adjustmentCount;
+            
+            if (totalCount > 0) {
+                approvalCount.textContent = totalCount;
                 approvalCount.classList.remove('hidden');
             } else {
                 approvalCount.classList.add('hidden');
@@ -1214,27 +1264,50 @@
             }
 
             const pendingDeletions = sessionData.pendingDeletions || {};
+            const pendingAdjustments = sessionData.pendingAdjustments || {};
             const deletionEntries = Object.entries(pendingDeletions);
+            const adjustmentEntries = Object.entries(pendingAdjustments);
             
-            if (deletionEntries.length === 0) {
+            if (deletionEntries.length === 0 && adjustmentEntries.length === 0) {
                 approvalsContent.innerHTML = '<div class="empty-notifications">Onay bekleyen işlem yok</div>';
                 return;
             }
 
             let html = '';
+            
+            // Render deletions
             deletionEntries.forEach(([deleteId, deletion]) => {
                 const timeAgo = getTimeAgo(deletion.requestedAt);
                 html += `
                     <div class="pending-approval">
                         <div style="margin-bottom: 10px;">
                             <div class="pending-approval-text" style="font-size: 16px; margin-bottom: 5px;">
-                                ${deletion.participantName} - ${deletion.drinkType} silmek istiyor
+                                🗑️ ${deletion.participantName} - ${deletion.drinkType} silmek istiyor
                             </div>
                             <div style="color: #6c757d; font-size: 12px;">${timeAgo}</div>
                         </div>
                         <div class="pending-approval-actions">
                             <button class="btn-success" onclick="window.approveDeletion('${deleteId}')">✓ Onayla</button>
                             <button class="btn-danger" onclick="window.rejectDeletion('${deleteId}')">✕ Reddet</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render adjustments
+            adjustmentEntries.forEach(([adjustId, adjustment]) => {
+                const timeAgo = getTimeAgo(adjustment.requestedAt);
+                html += `
+                    <div class="pending-approval">
+                        <div style="margin-bottom: 10px;">
+                            <div class="pending-approval-text" style="font-size: 16px; margin-bottom: 5px;">
+                                ➖ ${adjustment.participantName} - ${adjustment.drinkType} azaltmak istiyor (${adjustment.currentQty} → ${adjustment.newQty})
+                            </div>
+                            <div style="color: #6c757d; font-size: 12px;">${timeAgo}</div>
+                        </div>
+                        <div class="pending-approval-actions">
+                            <button class="btn-success" onclick="window.approveAdjustment('${adjustId}')">✓ Onayla</button>
+                            <button class="btn-danger" onclick="window.rejectAdjustment('${adjustId}')">✕ Reddet</button>
                         </div>
                     </div>
                 `;
@@ -1403,7 +1476,9 @@
                 drinkTypes: [],
                 drinkHistory: {},
                 undoStack: [],
-                notifications: []
+                notifications: [],
+                pendingDeletions: {},
+                pendingAdjustments: {}
             };
 
             try {
@@ -1430,6 +1505,26 @@
         document.getElementById('closeSessionCreatedModal').addEventListener('click', () => {
             sessionCreatedModal.classList.add('hidden');
             loadSession(currentSession);
+        });
+
+        // Copy new session info
+        document.getElementById('copyNewSessionInfo').addEventListener('click', () => {
+            const sessionCode = document.getElementById('newSessionCode').textContent;
+            const adminCodeValue = document.getElementById('newAdminCode').textContent;
+            const text = `Oturum Kodu: ${sessionCode}\nAdmin Kodu: ${adminCodeValue}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Bilgiler kopyalandı!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Bilgiler kopyalandı!', 'success');
+            });
         });
 
         // Join Session - Step 1: Code Entry
@@ -1542,6 +1637,7 @@
                     undoStack: data.undoStack || [],
                     notifications: data.notifications || [],
                     pendingDeletions: data.pendingDeletions || {},
+                    pendingAdjustments: data.pendingAdjustments || {},
                     adminCode: data.adminCode,
                     adminUserId: data.adminUserId,
                     createdAt: data.createdAt
@@ -1565,6 +1661,7 @@
                     <div class="admin-controls">
                         <button class="btn-primary" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
                         <button class="undo-btn" onclick="window.undoLastAction()" ${!canUndo() ? 'disabled' : ''}>↶ Geri Al</button>
+                        <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Kodu Göster</button>
                     </div>
                 `;
             }
@@ -1880,13 +1977,46 @@
         });
 
         // Adjust Drink
-        window.adjustDrink = function(participantId, drinkType, change) {
+        window.adjustDrink = async function(participantId, drinkType, change) {
             if (!isAdmin && participantId !== currentParticipantId) return;
 
             const participant = sessionData.participants[participantId];
             const currentQty = sessionData.drinks[participantId]?.[drinkType] || 0;
             const newQty = currentQty + change;
 
+            // If participant is decreasing their own drink, request admin approval
+            if (!isAdmin && participantId === currentParticipantId && change < 0) {
+                const message = `${participant.name}, ${drinkType} azaltma isteği gönderdi (${currentQty} → ${newQty})`;
+                
+                try {
+                    await addNotification(message, 'warning');
+                    
+                    // Add to pending adjustments
+                    const pendingAdjustments = sessionData.pendingAdjustments || {};
+                    const adjustId = `adj_${Date.now()}`;
+                    pendingAdjustments[adjustId] = {
+                        participantId: participantId,
+                        participantName: participant.name,
+                        drinkType: drinkType,
+                        change: change,
+                        currentQty: currentQty,
+                        newQty: newQty,
+                        requestedAt: Date.now(),
+                        requestedBy: participantId
+                    };
+                    
+                    await update(ref(database, `sessions/${currentSession}`), {
+                        pendingAdjustments: pendingAdjustments
+                    });
+                    
+                    showToast('Azaltma isteği admin onayına gönderildi', 'info');
+                } catch (error) {
+                    alert('İstek gönderilirken hata: ' + error.message);
+                }
+                return;
+            }
+
+            // Admin can adjust directly
             let message;
             if (newQty <= 0) {
                 message = `${participant.name} için ${drinkType} silinecek. Devam edilsin mi?`;
@@ -2321,6 +2451,106 @@
             }
         };
 
+        // Approve adjustment request
+        window.approveAdjustment = async function(adjustId) {
+            if (!isAdmin) return;
+
+            const pendingAdjustments = { ...(sessionData.pendingAdjustments || {}) };
+            const adjustment = pendingAdjustments[adjustId];
+            
+            if (!adjustment) return;
+
+            const { participantId, drinkType, change, participantName } = adjustment;
+            
+            const updatedDrinks = { ...sessionData.drinks };
+            const updatedHistory = { ...sessionData.drinkHistory };
+            const updatedUndo = [...(sessionData.undoStack || [])];
+            const timestamp = Date.now();
+
+            const currentQty = updatedDrinks[participantId]?.[drinkType] || 0;
+            const newQty = currentQty + change;
+
+            if (newQty <= 0) {
+                // Delete drink
+                delete updatedDrinks[participantId][drinkType];
+                if (Object.keys(updatedDrinks[participantId]).length === 0) {
+                    delete updatedDrinks[participantId];
+                }
+
+                if (updatedHistory[participantId]) {
+                    updatedHistory[participantId] = updatedHistory[participantId].filter(entry => entry.drink !== drinkType);
+                    if (updatedHistory[participantId].length === 0) {
+                        delete updatedHistory[participantId];
+                    }
+                }
+            } else {
+                // Adjust drink
+                updatedDrinks[participantId][drinkType] = newQty;
+
+                if (updatedHistory[participantId]) {
+                    updatedHistory[participantId].push({
+                        drink: drinkType,
+                        quantity: change,
+                        timestamp: timestamp,
+                        addedBy: participantId
+                    });
+                }
+            }
+
+            updatedUndo.push({
+                action: 'adjustDrink',
+                participantId: participantId,
+                drink: drinkType,
+                change: change,
+                timestamp: timestamp,
+                expiresAt: timestamp + 30000
+            });
+
+            // Remove from pending
+            delete pendingAdjustments[adjustId];
+
+            try {
+                await update(ref(database, `sessions/${currentSession}`), {
+                    drinks: updatedDrinks,
+                    drinkHistory: updatedHistory,
+                    undoStack: updatedUndo,
+                    pendingAdjustments: pendingAdjustments
+                });
+
+                await addNotification(`${participantName} için ${drinkType} azaltma isteği onaylandı (${adjustment.currentQty} → ${adjustment.newQty})`, 'success');
+                showToast('Azaltma isteği onaylandı', 'success');
+                updateApprovalCount();
+                renderApprovals();
+            } catch (error) {
+                alert('Onaylama sırasında hata: ' + error.message);
+            }
+        };
+
+        // Reject adjustment request
+        window.rejectAdjustment = async function(adjustId) {
+            if (!isAdmin) return;
+
+            const pendingAdjustments = { ...(sessionData.pendingAdjustments || {}) };
+            const adjustment = pendingAdjustments[adjustId];
+            
+            if (!adjustment) return;
+
+            delete pendingAdjustments[adjustId];
+
+            try {
+                await update(ref(database, `sessions/${currentSession}`), {
+                    pendingAdjustments: pendingAdjustments
+                });
+
+                await addNotification(`${adjustment.participantName} için ${adjustment.drinkType} azaltma isteği reddedildi`, 'warning');
+                showToast('Azaltma isteği reddedildi', 'warning');
+                updateApprovalCount();
+                renderApprovals();
+            } catch (error) {
+                alert('Reddetme sırasında hata: ' + error.message);
+            }
+        };
+
         // Remove participant (admin only)
         window.removeParticipant = async function(participantId) {
             if (!isAdmin) {
@@ -2347,6 +2577,38 @@
             }
         };
 
+        // Show admin code
+        window.showAdminCode = function() {
+            if (!isAdmin) return;
+            
+            document.getElementById('showSessionCode').textContent = currentSession;
+            document.getElementById('showAdminCodeValue').textContent = adminCode;
+            document.getElementById('showAdminCodeModal').classList.remove('hidden');
+        };
+
+        // Close show admin code modal
+        document.getElementById('closeShowAdminCode').addEventListener('click', () => {
+            document.getElementById('showAdminCodeModal').classList.add('hidden');
+        });
+
+        // Copy admin info to clipboard
+        document.getElementById('copyAdminInfo').addEventListener('click', () => {
+            const text = `Oturum Kodu: ${currentSession}\nAdmin Kodu: ${adminCode}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Bilgiler kopyalandı!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Bilgiler kopyalandı!', 'success');
+            });
+        });
+
         // Leave session
         window.leaveSession = function() {
             if (confirm('Bu oturumdan ayrılmak istediğinize emin misiniz?')) {
@@ -2365,7 +2627,9 @@
                 drinkTypes: [],
                 drinkHistory: {},
                 undoStack: [],
-                notifications: []
+                notifications: [],
+                pendingDeletions: {},
+                pendingAdjustments: {}
             };
             
             localStorage.removeItem('currentSession');
