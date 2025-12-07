@@ -930,6 +930,7 @@
         let adminCode = localStorage.getItem('adminCode');
         let userId = localStorage.getItem('userId');
         let currentParticipantId = localStorage.getItem('currentParticipantId');
+        let activeTab = 'main';  // Track which tab is currently active
         
         // Generate user ID if not exists
         if (!userId) {
@@ -1107,6 +1108,7 @@
 
         // Tab Navigation
         mainTab.addEventListener('click', () => {
+            activeTab = 'main';
             mainTab.classList.add('active');
             notificationsTab.classList.remove('active');
             approvalsTab.classList.remove('active');
@@ -1116,6 +1118,7 @@
         });
 
         notificationsTab.addEventListener('click', () => {
+            activeTab = 'notifications';
             notificationsTab.classList.add('active');
             mainTab.classList.remove('active');
             approvalsTab.classList.remove('active');
@@ -1126,6 +1129,7 @@
         });
 
         approvalsTab.addEventListener('click', () => {
+            activeTab = 'approvals';
             approvalsTab.classList.add('active');
             mainTab.classList.remove('active');
             notificationsTab.classList.remove('active');
@@ -1195,8 +1199,8 @@
                 return;
             }
 
-            // Sort by timestamp, newest first
-            const sortedNotifications = [...userNotifications].sort((a, b) => b.timestamp - a.timestamp);
+            // Sort by timestamp, oldest first
+            const sortedNotifications = [...userNotifications].sort((a, b) => a.timestamp - b.timestamp);
 
             let html = '';
             sortedNotifications.forEach(notification => {
@@ -1693,6 +1697,13 @@
                 updateNotificationCount();
                 if (isAdmin) {
                     updateApprovalCount();
+                }
+                
+                // Auto-update active tab content
+                if (activeTab === 'notifications') {
+                    renderNotifications();
+                } else if (activeTab === 'approvals') {
+                    renderApprovals();
                 }
             });
         }
