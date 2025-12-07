@@ -1727,8 +1727,27 @@
                 return;
             }
             
-            Object.entries(participants).forEach(([pid, participant]) => {
-                if (!participant.isActive) return;
+            // Sort participants
+            let participantEntries = Object.entries(participants).filter(([pid, p]) => p.isActive);
+            
+            if (isAdmin) {
+                // Admin: Alphabetically by name
+                participantEntries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'tr'));
+            } else {
+                // Participant: Self first, then alphabetically
+                participantEntries.sort((a, b) => {
+                    const aIsSelf = a[0] === currentParticipantId;
+                    const bIsSelf = b[0] === currentParticipantId;
+                    
+                    if (aIsSelf) return -1;  // Self always first
+                    if (bIsSelf) return 1;
+                    
+                    // Rest alphabetically
+                    return a[1].name.localeCompare(b[1].name, 'tr');
+                });
+            }
+            
+            participantEntries.forEach(([pid, participant]) => {
 
                 const isSelf = pid === currentParticipantId;
                 const needsAttention = checkIfNeedsAttention(pid, now);
