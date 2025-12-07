@@ -1199,7 +1199,8 @@
         // Add notification to session
         // Add notification to specific user(s)
         // targetUserIds: array of userIds, or 'all' for everyone, or 'admin' for admin only
-        async function addNotification(message, type = 'info', targetUserIds = 'all') {
+        // excludeCurrentUser: if true, don't send notification to the person who triggered it
+        async function addNotification(message, type = 'info', targetUserIds = 'all', excludeCurrentUser = true) {
             const baseId = Date.now();
             const timestamp = Date.now();
 
@@ -1231,6 +1232,11 @@
 
                 // Remove duplicates
                 userIdsToNotify = [...new Set(userIdsToNotify)];
+
+                // Exclude current user if requested (default behavior)
+                if (excludeCurrentUser) {
+                    userIdsToNotify = userIdsToNotify.filter(uid => uid !== userId);
+                }
 
                 // Add notification to each user's list with unique ID
                 userIdsToNotify.forEach((uid, index) => {
