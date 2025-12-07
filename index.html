@@ -687,7 +687,109 @@
                 font-size: 24px;
             }
         }
+
+        /* Stats Styles */
+        .stats-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .stats-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2a2a3e;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: #1a2332;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #2a2a3e;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #4a90e2;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #b0b0b0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stats-ranking {
+            margin-bottom: 20px;
+        }
+
+        .participant-stat {
+            background: #1a2332;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .participant-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+        }
+
+        .participant-stat.self {
+            background: #2a3a4e;
+            box-shadow: 0 0 0 2px #4a90e2;
+        }
+
+        .stat-rank {
+            font-size: 24px;
+            font-weight: 700;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .stat-info {
+            flex: 1;
+        }
+
+        .stat-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 5px;
+        }
+
+        .stat-details {
+            font-size: 14px;
+            color: #b0b0b0;
+        }
+
+        .stats-disclaimer {
+            background: #2a2a3e;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            color: #ffc107;
+            font-size: 13px;
+            margin-top: 20px;
+        }
     </style>
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -707,6 +809,7 @@
             <button class="tab-btn active" id="mainTab">Ana Sayfa</button>
             <button class="tab-btn" id="notificationsTab">Bildirimler <span class="notification-badge hidden" id="notificationCount">0</span></button>
             <button class="tab-btn" id="approvalsTab">Onaylar <span class="notification-badge hidden" id="approvalCount">0</span></button>
+            <button class="tab-btn" id="statsTab">📊 İstatistikler</button>
         </div>
 
         <!-- Session Management (shown when not in a session) -->
@@ -723,6 +826,9 @@
 
         <!-- Approvals Content -->
         <div id="approvalsContent" class="hidden"></div>
+        
+        <!-- Stats Content -->
+        <div id="statsContent" class="hidden"></div>
     </div>
 
     <!-- Credits -->
@@ -905,10 +1011,18 @@
     <!-- Show Admin Code Modal -->
     <div id="showAdminCodeModal" class="modal-overlay hidden">
         <div class="modal">
-            <div class="modal-title">🔑 Admin Bilgileri</div>
+            <div class="modal-title">🔑 Oturum Bilgileri</div>
             <div class="modal-message">
-                Bu bilgileri güvenli bir yerde saklayın!
+                Bu bilgileri paylaşarak arkadaşlarınızı davet edin!
             </div>
+            
+            <!-- QR Code -->
+            <div style="text-align: center; margin: 20px 0;">
+                <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">QR Kod ile Katıl:</div>
+                <div id="qrCodeContainer" style="background: white; padding: 20px; border-radius: 12px; display: inline-block;"></div>
+                <div style="margin-top: 10px; color: #b0b0b0; font-size: 12px;">Telefonla tarat, hemen katıl!</div>
+            </div>
+            
             <div class="admin-code-display">
                 <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">Oturum Kodu:</div>
                 <strong id="showSessionCode" style="font-size: 28px; color: #4a90e2;"></strong>
@@ -1084,6 +1198,106 @@
             return '🍹'; // Default icon
         }
 
+        // Alcohol content estimation (in grams of pure alcohol)
+        const ALCOHOL_CONTENT = {
+            // Beer / Bira
+            'bira': 14,
+            'beer': 14,
+            'efes': 14,
+            'tuborg': 14,
+            'bomonti': 14,
+            
+            // Wine / Şarap
+            'şarap': 14,
+            'wine': 14,
+            'kırmızı şarap': 14,
+            'beyaz şarap': 14,
+            
+            // Spirits / Sert İçkiler
+            'rakı': 17,
+            'raki': 17,
+            'rak': 17,
+            'vodka': 17,
+            'votka': 17,
+            'viski': 17,
+            'whisky': 17,
+            'whiskey': 17,
+            'bourbon': 17,
+            'scotch': 17,
+            'gin': 17,
+            'cin': 17,
+            'rom': 17,
+            'rum': 17,
+            'tekila': 17,
+            'tequila': 17,
+            
+            // Cocktails / Kokteyller
+            'kokteyl': 18,
+            'cocktail': 18,
+            'mojito': 16,
+            'margarita': 18,
+            'martini': 20,
+            'cin tonik': 16,
+            'vodka portakal': 16,
+            
+            // Champagne
+            'şampanya': 12,
+            'champagne': 12,
+            'prosecco': 12,
+            
+            // Shots
+            'shot': 14,
+            'jäger': 14,
+            'jager': 14,
+            
+            // Default
+            'default': 15
+        };
+
+        // Get alcohol content for drink type
+        function getAlcoholContent(drinkType) {
+            if (!drinkType) return ALCOHOL_CONTENT.default;
+            
+            const lowerDrink = drinkType.toLowerCase();
+            
+            // Exact match
+            if (ALCOHOL_CONTENT[lowerDrink]) {
+                return ALCOHOL_CONTENT[lowerDrink];
+            }
+            
+            // Partial match
+            for (const [key, value] of Object.entries(ALCOHOL_CONTENT)) {
+                if (lowerDrink.includes(key) || key.includes(lowerDrink)) {
+                    return value;
+                }
+            }
+            
+            return ALCOHOL_CONTENT.default;
+        }
+
+        // Calculate total alcohol for a participant
+        function calculateTotalAlcohol(participantId) {
+            const drinks = sessionData.drinks[participantId] || {};
+            let totalAlcohol = 0;
+            
+            Object.entries(drinks).forEach(([drinkType, quantity]) => {
+                const alcoholPerDrink = getAlcoholContent(drinkType);
+                totalAlcohol += alcoholPerDrink * quantity;
+            });
+            
+            return totalAlcohol;
+        }
+
+        // Get drunkness level description
+        function getDrunknessLevel(alcoholGrams) {
+            if (alcoholGrams === 0) return { level: 'Ayık', emoji: '😊', color: '#28a745' };
+            if (alcoholGrams < 30) return { level: 'Hafif Neşeli', emoji: '🙂', color: '#4a90e2' };
+            if (alcoholGrams < 60) return { level: 'Neşeli', emoji: '😄', color: '#ffc107' };
+            if (alcoholGrams < 90) return { level: 'Çakırkeyif', emoji: '😜', color: '#ff9800' };
+            if (alcoholGrams < 120) return { level: 'Sarhoş', emoji: '🥴', color: '#ff5722' };
+            return { level: 'Çok Sarhoş', emoji: '🤢', color: '#dc3545' };
+        }
+
         // Session data
         let sessionData = {
             participants: {},
@@ -1110,6 +1324,8 @@
         const mainContent = document.getElementById('mainContent');
         const notificationsContent = document.getElementById('notificationsContent');
         const approvalsContent = document.getElementById('approvalsContent');
+        const statsTab = document.getElementById('statsTab');
+        const statsContent = document.getElementById('statsContent');
         const tabNavigation = document.getElementById('tabNavigation');
         const mainTab = document.getElementById('mainTab');
         const notificationsTab = document.getElementById('notificationsTab');
@@ -1169,9 +1385,11 @@
             mainTab.classList.add('active');
             notificationsTab.classList.remove('active');
             approvalsTab.classList.remove('active');
+            statsTab.classList.remove('active');
             mainContent.classList.remove('hidden');
             notificationsContent.classList.add('hidden');
             approvalsContent.classList.add('hidden');
+            statsContent.classList.add('hidden');
         });
 
         notificationsTab.addEventListener('click', () => {
@@ -1179,9 +1397,11 @@
             notificationsTab.classList.add('active');
             mainTab.classList.remove('active');
             approvalsTab.classList.remove('active');
+            statsTab.classList.remove('active');
             notificationsContent.classList.remove('hidden');
             mainContent.classList.add('hidden');
             approvalsContent.classList.add('hidden');
+            statsContent.classList.add('hidden');
             renderNotifications();
         });
 
@@ -1190,10 +1410,25 @@
             approvalsTab.classList.add('active');
             mainTab.classList.remove('active');
             notificationsTab.classList.remove('active');
+            statsTab.classList.remove('active');
             approvalsContent.classList.remove('hidden');
             mainContent.classList.add('hidden');
             notificationsContent.classList.add('hidden');
+            statsContent.classList.add('hidden');
             renderApprovals();
+        });
+
+        statsTab.addEventListener('click', () => {
+            activeTab = 'stats';
+            statsTab.classList.add('active');
+            mainTab.classList.remove('active');
+            notificationsTab.classList.remove('active');
+            approvalsTab.classList.remove('active');
+            statsContent.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+            notificationsContent.classList.add('hidden');
+            approvalsContent.classList.add('hidden');
+            renderStats();
         });
 
         // Add notification to session
@@ -1523,7 +1758,139 @@
             approvalsContent.innerHTML = html;
         }
 
+        // Render Statistics
+        function renderStats() {
+            const participants = sessionData.participants || {};
+            const drinks = sessionData.drinks || {};
+            
+            // Calculate stats for each participant
+            const stats = [];
+            let totalDrinks = 0;
+            let totalAlcohol = 0;
+            const drinkTypeCounts = {};
+            
+            Object.entries(participants).forEach(([pid, participant]) => {
+                if (!participant.isActive) return;
+                
+                const participantDrinks = drinks[pid] || {};
+                const drinkCount = Object.values(participantDrinks).reduce((sum, qty) => sum + qty, 0);
+                const alcoholGrams = calculateTotalAlcohol(pid);
+                
+                totalDrinks += drinkCount;
+                totalAlcohol += alcoholGrams;
+                
+                // Count drink types
+                Object.entries(participantDrinks).forEach(([type, qty]) => {
+                    drinkTypeCounts[type] = (drinkTypeCounts[type] || 0) + qty;
+                });
+                
+                stats.push({
+                    name: participant.name,
+                    drinkCount,
+                    alcoholGrams,
+                    drunknessInfo: getDrunknessLevel(alcoholGrams)
+                });
+            });
+            
+            // Sort by alcohol content (most drunk first)
+            stats.sort((a, b) => b.alcoholGrams - a.alcoholGrams);
+            
+            // Find most popular drink
+            let mostPopularDrink = null;
+            let maxCount = 0;
+            Object.entries(drinkTypeCounts).forEach(([type, count]) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostPopularDrink = type;
+                }
+            });
+            
+            if (stats.length === 0) {
+                statsContent.innerHTML = '<div class="empty-notifications">Henüz veri yok</div>';
+                return;
+            }
+            
+            // Calculate session duration
+            const sessionStartTime = sessionData.createdAt || Date.now();
+            const duration = Math.floor((Date.now() - sessionStartTime) / 1000 / 60); // minutes
+            const hours = Math.floor(duration / 60);
+            const minutes = duration % 60;
+            const durationText = hours > 0 ? `${hours}sa ${minutes}dk` : `${minutes}dk`;
+            
+            let html = `
+                <div class="stats-container">
+                    <div class="stats-header">
+                        <h2 style="color: #e0e0e0; margin: 0 0 10px 0;">📊 Oturum İstatistikleri</h2>
+                        <div style="color: #b0b0b0; font-size: 14px;">Tahmini Sarhoşluk Seviyeleri</div>
+                    </div>
+                    
+                    <div class="stats-summary">
+                        <div class="stat-box">
+                            <div class="stat-value">${totalDrinks}</div>
+                            <div class="stat-label">Toplam İçki</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${getDrinkIcon(mostPopularDrink)} ${mostPopularDrink || '-'}</div>
+                            <div class="stat-label">En Çok İçilen (${maxCount})</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${stats.length}</div>
+                            <div class="stat-label">Aktif Katılımcı</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${durationText}</div>
+                            <div class="stat-label">Oturum Süresi</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-ranking">
+                        <h3 style="color: #e0e0e0; margin: 20px 0 15px 0;">🏆 Sarhoşluk Sıralaması</h3>
+            `;
+            
+            stats.forEach((stat, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                const isSelf = sessionData.participants && Object.entries(sessionData.participants).find(([pid, p]) => p.name === stat.name && pid === currentParticipantId);
+                
+                html += `
+                    <div class="participant-stat ${isSelf ? 'self' : ''}" style="border-left: 4px solid ${stat.drunknessInfo.color};">
+                        <div class="stat-rank">${medal}</div>
+                        <div class="stat-info">
+                            <div class="stat-name">${stat.name}${isSelf ? ' (Ben)' : ''}</div>
+                            <div class="stat-details">
+                                <span>${stat.drunknessInfo.emoji} ${stat.drunknessInfo.level}</span>
+                                <span style="margin-left: 10px;">•</span>
+                                <span style="margin-left: 10px;">${stat.drinkCount} içki</span>
+                                <span style="margin-left: 10px;">•</span>
+                                <span style="margin-left: 10px;">~${stat.alcoholGrams}g alkol</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                    
+                    <div class="stats-disclaimer">
+                        ⚠️ Bu değerler tahminidir ve kişiden kişiye değişir. Sorumlu içki tüketimi önemlidir!
+                    </div>
+                </div>
+            `;
+            
+            statsContent.innerHTML = html;
+        }
+
         function initializeApp() {
+            // Check for join parameter in URL (QR code)
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinSession = urlParams.get('join');
+            
+            if (joinSession && !currentSession) {
+                // Auto-fill join session code
+                document.getElementById('joinSessionCodeInput').value = joinSession;
+                showToast('QR kod tarandı! Katılmak için devam edin', 'success');
+            }
+            
             // Request notification permission on app load
             requestNotificationPermission();
             
@@ -2792,6 +3159,23 @@
             
             document.getElementById('showSessionCode').textContent = currentSession;
             document.getElementById('showAdminCodeValue').textContent = adminCode;
+            
+            // Generate QR Code
+            const qrContainer = document.getElementById('qrCodeContainer');
+            qrContainer.innerHTML = ''; // Clear previous QR code
+            
+            // Create URL for joining session
+            const joinUrl = `${window.location.origin}${window.location.pathname}?join=${currentSession}`;
+            
+            new QRCode(qrContainer, {
+                text: joinUrl,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
             document.getElementById('showAdminCodeModal').classList.remove('hidden');
         };
 
