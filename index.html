@@ -2593,6 +2593,47 @@
             const participant = sessionData.participants[participantId];
             const existingDrinkType = sessionData.drinkTypes.find(d => d.toLowerCase() === drinkType.toLowerCase()) || drinkType;
             
+            // DUPLICATE DETECTION: Check if same drink added too quickly
+            const history = sessionData.drinkHistory?.[participantId] || [];
+            if (history.length > 0) {
+                const now = Date.now();
+                const lastEntry = [...history].sort((a, b) => b.timestamp - a.timestamp)[0];
+                const timeSinceLastDrink = (now - lastEntry.timestamp) / 1000 / 60; // minutes
+                
+                // Calculate average interval if we have multiple drinks
+                let threshold = 5; // Default: 5 minutes
+                
+                if (history.length >= 2) {
+                    const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+                    const intervals = [];
+                    for (let i = 0; i < Math.min(sortedHistory.length - 1, 5); i++) {
+                        intervals.push((sortedHistory[i].timestamp - sortedHistory[i + 1].timestamp) / 1000 / 60);
+                    }
+                    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                    threshold = Math.max(avgInterval * 0.5, 3); // Half of average, minimum 3 minutes
+                }
+                
+                // If adding same drink type too quickly, ask for confirmation
+                if (lastEntry.drink.toLowerCase() === existingDrinkType.toLowerCase() && 
+                    timeSinceLastDrink < threshold) {
+                    const minutes = Math.floor(timeSinceLastDrink);
+                    const seconds = Math.floor((timeSinceLastDrink - minutes) * 60);
+                    const timeAgo = minutes > 0 ? `${minutes} dakika ${seconds} saniye` : `${seconds} saniye`;
+                    
+                    const confirmMessage = `⚠️ DİKKAT: Mükerrer Giriş Kontrolü\n\n` +
+                        `${participant.name} için ${timeAgo} önce "${lastEntry.drink}" eklendi.\n\n` +
+                        `Şimdi tekrar "${existingDrinkType}" eklemek istiyorsunuz.\n\n` +
+                        `Ortalama içme aralığı: ${Math.round(threshold)} dakika\n` +
+                        `Son içki: ${timeAgo} önce (çok kısa!)\n\n` +
+                        `Bu mükerrer bir giriş olabilir.\n` +
+                        `Yine de eklemek istediğinize emin misiniz?`;
+                    
+                    if (!confirm(confirmMessage)) {
+                        return; // User cancelled
+                    }
+                }
+            }
+            
             const updatedDrinks = { ...sessionData.drinks };
             const updatedDrinkTypes = [...sessionData.drinkTypes];
             const updatedHistory = { ...sessionData.drinkHistory };
