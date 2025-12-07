@@ -2591,14 +2591,23 @@
             }
 
             const participant = sessionData.participants[participantId];
-            const existingDrinkType = sessionData.drinkTypes.find(d => d.toLowerCase() === drinkType.toLowerCase()) || drinkType;
+            const existingDrinkType = (sessionData.drinkTypes || []).find(d => d.toLowerCase() === drinkType.toLowerCase()) || drinkType;
             
             // DUPLICATE DETECTION: Check if same drink added too quickly
             const history = sessionData.drinkHistory?.[participantId] || [];
+            
+            console.log('=== DUPLICATE CHECK ===');
+            console.log('Participant:', participant?.name);
+            console.log('Adding drink:', existingDrinkType);
+            console.log('History length:', history.length);
+            
             if (history.length > 0) {
                 const now = Date.now();
                 const lastEntry = [...history].sort((a, b) => b.timestamp - a.timestamp)[0];
                 const timeSinceLastDrink = (now - lastEntry.timestamp) / 1000 / 60; // minutes
+                
+                console.log('Last drink:', lastEntry.drink);
+                console.log('Time since last:', timeSinceLastDrink.toFixed(2), 'minutes');
                 
                 // Calculate average interval if we have multiple drinks
                 let threshold = 5; // Default: 5 minutes
@@ -2611,11 +2620,17 @@
                     }
                     const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
                     threshold = Math.max(avgInterval * 0.5, 3); // Half of average, minimum 3 minutes
+                    console.log('Average interval:', avgInterval.toFixed(2), 'minutes');
                 }
+                
+                console.log('Threshold:', threshold.toFixed(2), 'minutes');
+                console.log('Same drink?', lastEntry.drink.toLowerCase() === existingDrinkType.toLowerCase());
+                console.log('Too fast?', timeSinceLastDrink < threshold);
                 
                 // If adding same drink type too quickly, ask for confirmation
                 if (lastEntry.drink.toLowerCase() === existingDrinkType.toLowerCase() && 
                     timeSinceLastDrink < threshold) {
+                    console.log('🚨 SHOWING DUPLICATE WARNING!');
                     const minutes = Math.floor(timeSinceLastDrink);
                     const seconds = Math.floor((timeSinceLastDrink - minutes) * 60);
                     const timeAgo = minutes > 0 ? `${minutes} dakika ${seconds} saniye` : `${seconds} saniye`;
@@ -2629,13 +2644,19 @@
                         `Yine de eklemek istediğinize emin misiniz?`;
                     
                     if (!confirm(confirmMessage)) {
+                        console.log('❌ User cancelled duplicate entry');
                         return; // User cancelled
                     }
+                    console.log('✅ User confirmed duplicate entry');
+                } else {
+                    console.log('✅ No duplicate detected, proceeding normally');
                 }
+            } else {
+                console.log('✅ First drink, no duplicate check needed');
             }
             
             const updatedDrinks = { ...sessionData.drinks };
-            const updatedDrinkTypes = [...sessionData.drinkTypes];
+            const updatedDrinkTypes = [...(sessionData.drinkTypes || [])];
             const updatedHistory = { ...sessionData.drinkHistory };
             const updatedUndo = [...(sessionData.undoStack || [])];
             const updatedDrinkIcons = { ...(sessionData.drinkIcons || {}) };
