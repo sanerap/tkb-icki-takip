@@ -224,6 +224,19 @@
             flex: 1;
         }
 
+        .drink-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .drink-icons {
+            font-size: 20px;
+            line-height: 1;
+            letter-spacing: 2px;
+        }
+
         .drink-name {
             font-weight: 500;
             color: #e0e0e0;
@@ -349,6 +362,38 @@
         input:focus, select:focus {
             outline: none;
             border-color: #4a90e2;
+        }
+
+        .icon-picker {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .icon-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            font-size: 28px;
+            background: #1a2332;
+            border: 2px solid #2a2a3e;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            background: #2a2a3e;
+            transform: scale(1.1);
+        }
+
+        .icon-btn.selected {
+            background: #4a90e2;
+            border-color: #4a90e2;
+            transform: scale(1.15);
         }
 
         .modal-buttons {
@@ -794,6 +839,22 @@
                 <datalist id="drinkTypeList"></datalist>
             </div>
             <div class="form-group">
+                <label>İkon Seç:</label>
+                <div class="icon-picker" id="iconPicker">
+                    <button type="button" class="icon-btn" data-icon="🍺">🍺</button>
+                    <button type="button" class="icon-btn" data-icon="🍷">🍷</button>
+                    <button type="button" class="icon-btn" data-icon="🍸">🍸</button>
+                    <button type="button" class="icon-btn" data-icon="🥃">🥃</button>
+                    <button type="button" class="icon-btn" data-icon="🍹">🍹</button>
+                    <button type="button" class="icon-btn" data-icon="🍾">🍾</button>
+                    <button type="button" class="icon-btn" data-icon="🥂">🥂</button>
+                    <button type="button" class="icon-btn" data-icon="🍶">🍶</button>
+                    <button type="button" class="icon-btn" data-icon="🧃">🧃</button>
+                    <button type="button" class="icon-btn" data-icon="🥤">🥤</button>
+                </div>
+                <input type="hidden" id="selectedIcon" value="🍹">
+            </div>
+            <div class="form-group">
                 <label>Miktar:</label>
                 <input type="number" id="drinkQuantityInput" value="1" min="1">
             </div>
@@ -988,6 +1049,41 @@
             }
         }
 
+        // Drink icon mapping
+        const DRINK_ICONS = {
+            '🍺': ['Bira', 'Beer', 'Efes', 'Tuborg', 'Bomonti'],
+            '🍷': ['Şarap', 'Wine', 'Kırmızı Şarap', 'Beyaz Şarap'],
+            '🍸': ['Kokteyl', 'Cocktail', 'Martini', 'Mojito', 'Margarita'],
+            '🥃': ['Viski', 'Whisky', 'Whiskey', 'Bourbon', 'Scotch'],
+            '🍹': ['Cin Tonik', 'Gin', 'Tonic', 'Vodka Portakal'],
+            '🍾': ['Şampanya', 'Champagne', 'Prosecco'],
+            '🥂': ['Şerefe', 'Toast', 'Celebration'],
+            '🍶': ['Sake', 'Rakı', 'Rak', 'Raki'],
+            '🧃': ['Shot', 'Tekila', 'Tequila', 'Jäger'],
+            '🥤': ['Meşrubat', 'Kola', 'Fanta', 'Sprite', 'Soda']
+        };
+
+        // Get icon for drink type
+        function getDrinkIcon(drinkType) {
+            if (!drinkType) return '🍹';
+            
+            const lowerDrink = drinkType.toLowerCase();
+            
+            // Check custom icons first (stored in session)
+            if (sessionData.drinkIcons && sessionData.drinkIcons[drinkType]) {
+                return sessionData.drinkIcons[drinkType];
+            }
+            
+            // Find matching icon
+            for (const [icon, keywords] of Object.entries(DRINK_ICONS)) {
+                if (keywords.some(keyword => lowerDrink.includes(keyword.toLowerCase()))) {
+                    return icon;
+                }
+            }
+            
+            return '🍹'; // Default icon
+        }
+
         // Session data
         let sessionData = {
             participants: {},
@@ -997,7 +1093,8 @@
             undoStack: [],
             notifications: {},  // Changed: { userId: [...notifications] }
             pendingDeletions: {},
-            pendingAdjustments: {}
+            pendingAdjustments: {},
+            drinkIcons: {}  // Custom drink type to icon mapping
         };
 
         // Temporary data for session creation
@@ -1746,6 +1843,7 @@
                     notifications: data.notifications || {},  // Object with userId keys
                     pendingDeletions: data.pendingDeletions || {},
                     pendingAdjustments: data.pendingAdjustments || {},
+                    drinkIcons: data.drinkIcons || {},
                     adminCode: data.adminCode,
                     adminUserId: data.adminUserId,
                     createdAt: data.createdAt
@@ -1837,11 +1935,14 @@
                             </div>
                         </div>
                         
-                        ${drinkEntries.length > 0 ? drinkEntries.map(([drinkType, quantity]) => `
+                        ${drinkEntries.length > 0 ? drinkEntries.map(([drinkType, quantity]) => {
+                            const drinkIcon = getDrinkIcon(drinkType);
+                            const icons = drinkIcon.repeat(Math.min(quantity, 10)); // Max 10 icons
+                            return `
                             <div class="drink-item">
                                 <div class="drink-info">
-                                    <span class="drink-name">${drinkType}</span>
-                                    <span class="drink-quantity">${quantity}</span>
+                                    <span class="drink-icons">${icons}</span>
+                                    <span class="drink-name">${drinkType}: ${quantity}</span>
                                 </div>
                                 ${canEdit ? `
                                     <div class="drink-actions">
@@ -1851,7 +1952,7 @@
                                     </div>
                                 ` : ''}
                             </div>
-                        `).join('') : '<div class="empty-state" style="padding: 10px 0; font-size: 14px;">Henüz içki eklenmedi</div>'}
+                        `}).join('') : '<div class="empty-state" style="padding: 10px 0; font-size: 14px;">Henüz içki eklenmedi</div>'}
                         
                         ${canEdit ? `<button class="btn-primary add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
                     </div>
@@ -2009,11 +2110,46 @@
             
             document.getElementById('drinkTypeInput').value = '';
             document.getElementById('drinkQuantityInput').value = '1';
+            document.getElementById('selectedIcon').value = '🍹';
+            
+            // Reset icon selection
+            document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('selected'));
             
             pendingAction = { type: 'addDrink', participantId: participantId };
             addDrinkModal.classList.remove('hidden');
             document.getElementById('drinkTypeInput').focus();
         };
+
+        // Icon picker functionality
+        document.querySelectorAll('.icon-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const icon = btn.getAttribute('data-icon');
+                document.getElementById('selectedIcon').value = icon;
+                
+                // Update visual selection
+                document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+            });
+        });
+
+        // Auto-select icon based on drink type
+        document.getElementById('drinkTypeInput').addEventListener('input', (e) => {
+            const drinkType = e.target.value;
+            if (drinkType) {
+                const suggestedIcon = getDrinkIcon(drinkType);
+                document.getElementById('selectedIcon').value = suggestedIcon;
+                
+                // Update visual selection
+                document.querySelectorAll('.icon-btn').forEach(btn => {
+                    if (btn.getAttribute('data-icon') === suggestedIcon) {
+                        btn.classList.add('selected');
+                    } else {
+                        btn.classList.remove('selected');
+                    }
+                });
+            }
+        });
 
         document.getElementById('cancelAddDrink').addEventListener('click', () => {
             addDrinkModal.classList.add('hidden');
@@ -2036,6 +2172,7 @@
 
             const drinkType = document.getElementById('drinkTypeInput').value.trim();
             const quantity = parseInt(document.getElementById('drinkQuantityInput').value);
+            const selectedIcon = document.getElementById('selectedIcon').value;
             const participantId = pendingAction.participantId;
 
             if (!drinkType || quantity < 1) {
@@ -2050,9 +2187,15 @@
             const updatedDrinkTypes = [...sessionData.drinkTypes];
             const updatedHistory = { ...sessionData.drinkHistory };
             const updatedUndo = [...(sessionData.undoStack || [])];
+            const updatedDrinkIcons = { ...(sessionData.drinkIcons || {}) };
 
             if (!updatedDrinkTypes.some(d => d.toLowerCase() === existingDrinkType.toLowerCase())) {
                 updatedDrinkTypes.push(existingDrinkType);
+            }
+
+            // Save icon for this drink type
+            if (!updatedDrinkIcons[existingDrinkType]) {
+                updatedDrinkIcons[existingDrinkType] = selectedIcon;
             }
 
             if (!updatedDrinks[participantId]) {
@@ -2089,7 +2232,8 @@
                     drinks: updatedDrinks,
                     drinkTypes: updatedDrinkTypes,
                     drinkHistory: updatedHistory,
-                    undoStack: updatedUndo
+                    undoStack: updatedUndo,
+                    drinkIcons: updatedDrinkIcons
                 });
 
                 // Add notification
