@@ -2674,12 +2674,8 @@
                     return; // User cancelled
                 }
                 
-                const message = `${participant.name}, ${drinkType} azaltma isteği gönderdi (${currentQty} → ${newQty})`;
-                
                 try {
-                    await addNotification(message, 'warning');
-                    
-                    // Add to pending adjustments
+                    // Add to pending adjustments (no notification - admin sees in Approvals tab)
                     const pendingAdjustments = sessionData.pendingAdjustments || {};
                     const adjustId = `adj_${Date.now()}`;
                     pendingAdjustments[adjustId] = {
@@ -2831,12 +2827,8 @@
             
             // If participant is deleting their own drink, request admin approval
             if (!isAdmin && participantId === currentParticipantId) {
-                const message = `${participant.name}, ${drinkType} silme isteği gönderdi`;
-                
                 try {
-                    await addNotification(message, 'warning');
-                    
-                    // Add to pending deletions
+                    // Add to pending deletions (no notification - admin sees in Approvals tab)
                     const pendingDeletions = sessionData.pendingDeletions || {};
                     const deleteId = `del_${Date.now()}`;
                     pendingDeletions[deleteId] = {
