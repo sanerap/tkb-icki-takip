@@ -686,6 +686,15 @@
             h1 {
                 font-size: 24px;
             }
+            
+            /* Hide tab text on mobile, show only icons */
+            .tab-text {
+                display: none;
+            }
+            
+            .tab-btn {
+                font-size: 20px; /* Larger icons */
+            }
         }
 
         /* Stats Styles */
@@ -809,10 +818,10 @@
 
         <!-- Tab Navigation -->
         <div id="tabNavigation" class="tab-navigation hidden">
-            <button class="tab-btn active" id="mainTab">🏠 Ana Sayfa</button>
-            <button class="tab-btn" id="notificationsTab">🔔 Bildirimler <span class="notification-badge hidden" id="notificationCount">0</span></button>
-            <button class="tab-btn" id="approvalsTab">✅ Onaylar <span class="notification-badge hidden" id="approvalCount">0</span></button>
-            <button class="tab-btn" id="statsTab">📊 İstatistikler</button>
+            <button class="tab-btn active" id="mainTab">🏠 <span class="tab-text">Ana Sayfa</span></button>
+            <button class="tab-btn" id="notificationsTab">🔔 <span class="tab-text">Bildirimler</span> <span class="notification-badge hidden" id="notificationCount">0</span></button>
+            <button class="tab-btn" id="approvalsTab">✅ <span class="tab-text">Onaylar</span> <span class="notification-badge hidden" id="approvalCount">0</span></button>
+            <button class="tab-btn" id="statsTab">📊 <span class="tab-text">İstatistikler</span></button>
         </div>
 
         <!-- Session Management (shown when not in a session) -->
@@ -845,11 +854,19 @@
             <div class="modal-title">Yeni Oturum Oluştur</div>
             
             <div class="form-group">
-                <label>Katılımcı Ekle:</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="participantNameInput" placeholder="İsim girin" autocomplete="off">
-                    <button class="btn-primary btn-success" id="addParticipantBtn" style="width: auto; padding: 12px 20px;">+ Ekle</button>
+                <label>Katılımcı Bilgileri:</label>
+                <input type="text" id="participantNameInput" placeholder="İsim" autocomplete="off" style="margin-bottom: 10px;">
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <select id="participantGenderInput" style="flex: 1; padding: 12px; background: #0f1419; border: 1px solid #2a2a3e; border-radius: 8px; color: #e0e0e0; font-size: 16px;">
+                        <option value="male">Erkek</option>
+                        <option value="female">Kadın</option>
+                    </select>
+                    
+                    <input type="number" id="participantWeightInput" placeholder="Kilo (kg) - isteğe bağlı" min="40" max="200" style="flex: 1; padding: 12px; background: #0f1419; border: 1px solid #2a2a3e; border-radius: 8px; color: #e0e0e0; font-size: 16px;">
                 </div>
+                
+                <button class="btn-primary btn-success" id="addParticipantBtn" style="width: 100%; padding: 12px 20px;">+ Ekle</button>
             </div>
 
             <div class="participant-list" id="participantList">
@@ -929,6 +946,17 @@
             <div class="form-group">
                 <label>İsim:</label>
                 <input type="text" id="newParticipantNameInput" placeholder="İsim girin" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Cinsiyet:</label>
+                <select id="newParticipantGenderInput" style="width: 100%; padding: 12px; background: #0f1419; border: 1px solid #2a2a3e; border-radius: 8px; color: #e0e0e0; font-size: 16px;">
+                    <option value="male">Erkek</option>
+                    <option value="female">Kadın</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Kilo (isteğe bağlı):</label>
+                <input type="number" id="newParticipantWeightInput" placeholder="kg" min="40" max="200" style="width: 100%;">
             </div>
             <div class="modal-buttons">
                 <button class="btn-cancel" id="cancelAddParticipantSession">İptal</button>
@@ -1219,40 +1247,41 @@
             return '🍹'; // Default icon
         }
 
-        // Alcohol content estimation (in grams of pure alcohol)
+        // Alcohol content estimation (in grams of pure alcohol per drink)
+        // Assuming 500ml for all beer types
         const ALCOHOL_CONTENT = {
-            // Beer / Bira
-            'bira': 14,
-            'beer': 14,
-            'efes': 14,
-            'tuborg': 14,
-            'bomonti': 14,
+            // Beer / Bira (500ml @ 5% = 20g alcohol)
+            'bira': 20,
+            'beer': 20,
+            'efes': 20,
+            'tuborg': 20,
+            'bomonti': 20,
             
-            // Wine / Şarap
+            // Wine / Şarap (150ml glass @ 12% = 14g)
             'şarap': 14,
             'wine': 14,
             'kırmızı şarap': 14,
             'beyaz şarap': 14,
             
-            // Spirits / Sert İçkiler
-            'rakı': 17,
-            'raki': 17,
-            'rak': 17,
-            'vodka': 17,
-            'votka': 17,
-            'viski': 17,
-            'whisky': 17,
-            'whiskey': 17,
-            'bourbon': 17,
-            'scotch': 17,
-            'gin': 17,
-            'cin': 17,
-            'rom': 17,
-            'rum': 17,
-            'tekila': 17,
-            'tequila': 17,
+            // Spirits / Sert İçkiler (40ml shot @ 40% = 13g)
+            'rakı': 13,
+            'raki': 13,
+            'rak': 13,
+            'vodka': 13,
+            'votka': 13,
+            'viski': 13,
+            'whisky': 13,
+            'whiskey': 13,
+            'bourbon': 13,
+            'scotch': 13,
+            'gin': 13,
+            'cin': 13,
+            'rom': 13,
+            'rum': 13,
+            'tekila': 13,
+            'tequila': 13,
             
-            // Cocktails / Kokteyller
+            // Cocktails / Kokteyller (typical mixed drink)
             'kokteyl': 18,
             'cocktail': 18,
             'mojito': 16,
@@ -1261,15 +1290,15 @@
             'cin tonik': 16,
             'vodka portakal': 16,
             
-            // Champagne
-            'şampanya': 12,
-            'champagne': 12,
-            'prosecco': 12,
+            // Champagne (150ml @ 12% = 14g)
+            'şampanya': 14,
+            'champagne': 14,
+            'prosecco': 14,
             
-            // Shots
-            'shot': 14,
-            'jäger': 14,
-            'jager': 14,
+            // Shots (40ml @ 40% = 13g)
+            'shot': 13,
+            'jäger': 13,
+            'jager': 13,
             
             // Default
             'default': 15
@@ -1296,27 +1325,65 @@
             return ALCOHOL_CONTENT.default;
         }
 
-        // Calculate total alcohol for a participant
+        // Calculate total alcohol for a participant with time-based metabolism
+        // Returns grams of alcohol currently in bloodstream
         function calculateTotalAlcohol(participantId) {
-            const drinks = sessionData.drinks[participantId] || {};
+            const history = sessionData.drinkHistory?.[participantId] || [];
+            if (history.length === 0) return 0;
+            
+            const now = Date.now();
             let totalAlcohol = 0;
             
-            Object.entries(drinks).forEach(([drinkType, quantity]) => {
-                const alcoholPerDrink = getAlcoholContent(drinkType);
-                totalAlcohol += alcoholPerDrink * quantity;
+            // Alcohol metabolism rate: ~7-10g per hour, we use 8g/hour
+            const metabolismRate = 8; // grams per hour
+            
+            history.forEach(entry => {
+                const alcoholGrams = getAlcoholContent(entry.drink) * entry.quantity;
+                const hoursElapsed = (now - entry.timestamp) / 1000 / 60 / 60;
+                const metabolizedAlcohol = metabolismRate * hoursElapsed;
+                const remainingAlcohol = Math.max(0, alcoholGrams - metabolizedAlcohol);
+                totalAlcohol += remainingAlcohol;
             });
             
             return totalAlcohol;
         }
 
-        // Get drunkness level description
-        function getDrunknessLevel(alcoholGrams) {
-            if (alcoholGrams === 0) return { level: 'Ayık', emoji: '😊', color: '#28a745' };
-            if (alcoholGrams < 30) return { level: 'Hafif Neşeli', emoji: '🙂', color: '#4a90e2' };
-            if (alcoholGrams < 60) return { level: 'Neşeli', emoji: '😄', color: '#ffc107' };
-            if (alcoholGrams < 90) return { level: 'Çakırkeyif', emoji: '😜', color: '#ff9800' };
-            if (alcoholGrams < 120) return { level: 'Sarhoş', emoji: '🥴', color: '#ff5722' };
-            return { level: 'Çok Sarhoş', emoji: '🤢', color: '#dc3545' };
+        // Convert grams to promille (BAC - Blood Alcohol Concentration)
+        // Using Widmark formula: BAC = (alcohol_grams / (body_weight_kg × r)) × 10
+        // r = 0.68 for men, 0.55 for women (water distribution factor)
+        // personalized based on participant's gender and weight
+        function gramsToPromille(alcoholGrams, participantId) {
+            const participant = sessionData.participants[participantId];
+            if (!participant) {
+                // Fallback to average male
+                const bodyWeight = 75; // kg
+                const r = 0.68; // men's distribution factor
+                return (alcoholGrams / (bodyWeight * r)) * 10;
+            }
+            
+            // Use participant's weight or default based on gender
+            let bodyWeight = participant.weight;
+            if (!bodyWeight) {
+                bodyWeight = participant.gender === 'female' ? 65 : 75; // default weights
+            }
+            
+            // Distribution factor based on gender
+            const r = participant.gender === 'female' ? 0.55 : 0.68;
+            
+            const promille = (alcoholGrams / (bodyWeight * r)) * 10;
+            return promille;
+        }
+
+        // Get drunkness level description based on promille
+        function getDrunknessLevel(alcoholGrams, participantId) {
+            const promille = gramsToPromille(alcoholGrams, participantId);
+            
+            if (promille === 0) return { level: 'Ayık', emoji: '😊', color: '#28a745', promille };
+            if (promille < 0.5) return { level: 'Hafif Neşeli', emoji: '🙂', color: '#4a90e2', promille };
+            if (promille < 1.0) return { level: 'Neşeli', emoji: '😄', color: '#ffc107', promille };
+            if (promille < 1.5) return { level: 'Çakırkeyif', emoji: '😜', color: '#ff9800', promille };
+            if (promille < 2.0) return { level: 'Sarhoş', emoji: '🥴', color: '#ff5722', promille };
+            return { level: 'Çok Sarhoş', emoji: '🤢', color: '#dc3545', promille };
         }
 
         // Session data
@@ -1813,10 +1880,11 @@
                 });
                 
                 stats.push({
+                    pid: pid,
                     name: participant.name,
                     drinkCount,
                     alcoholGrams,
-                    drunknessInfo: getDrunknessLevel(alcoholGrams)
+                    drunknessInfo: getDrunknessLevel(alcoholGrams, pid)
                 });
             });
             
@@ -1889,7 +1957,7 @@
                                 <span style="margin-left: 10px;">•</span>
                                 <span style="margin-left: 10px;">${stat.drinkCount} içki</span>
                                 <span style="margin-left: 10px;">•</span>
-                                <span style="margin-left: 10px;">~${stat.alcoholGrams}g alkol</span>
+                                <span style="margin-left: 10px;">~${stat.drunknessInfo.promille.toFixed(2)}‰</span>
                             </div>
                         </div>
                     </div>
@@ -1981,8 +2049,13 @@
         });
 
         function addTempParticipant() {
-            const input = document.getElementById('participantNameInput');
-            const name = input.value.trim();
+            const nameInput = document.getElementById('participantNameInput');
+            const genderInput = document.getElementById('participantGenderInput');
+            const weightInput = document.getElementById('participantWeightInput');
+            
+            const name = nameInput.value.trim();
+            const gender = genderInput.value;
+            const weight = weightInput.value ? parseInt(weightInput.value) : null;
             
             if (!name) {
                 showToast('Lütfen bir isim girin', 'warning');
@@ -1996,11 +2069,15 @@
 
             tempParticipants.push({
                 id: generateParticipantId(),
-                name: name
+                name: name,
+                gender: gender,
+                weight: weight
             });
 
-            input.value = '';
-            input.focus();
+            nameInput.value = '';
+            weightInput.value = '';
+            genderInput.value = 'male';
+            nameInput.focus();
             updateParticipantListUI();
         }
 
@@ -2013,12 +2090,16 @@
                 confirmBtn.disabled = true;
                 confirmBtn.textContent = 'Oturumu Başlat (0 kişi)';
             } else {
-                list.innerHTML = tempParticipants.map(p => `
-                    <div class="participant-list-item">
-                        <span>${p.name}</span>
-                        <button onclick="window.removeTempParticipant('${p.id}')">✕ Sil</button>
-                    </div>
-                `).join('');
+                list.innerHTML = tempParticipants.map(p => {
+                    const genderIcon = p.gender === 'male' ? '♂️' : '♀️';
+                    const weightText = p.weight ? ` (${p.weight}kg)` : '';
+                    return `
+                        <div class="participant-list-item">
+                            <span>${genderIcon} ${p.name}${weightText}</span>
+                            <button onclick="window.removeTempParticipant('${p.id}')">✕ Sil</button>
+                        </div>
+                    `;
+                }).join('');
                 confirmBtn.disabled = false;
                 confirmBtn.textContent = `Oturumu Başlat (${tempParticipants.length} kişi)`;
             }
@@ -2276,8 +2357,11 @@
                 html += `
                     <div class="admin-controls">
                         <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
-                        <button class="btn-primary" onclick="window.showQRCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">📱 QR Paylaş</button>
                         <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Admin Kodu</button>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; gap: 10px;">
+                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('clearAll')" style="flex: 1;">Tümünü Sil</button>
+                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('endSession')" style="flex: 1;">Oturumu Sonlandır</button>
                     </div>
                 `;
             }
@@ -2363,15 +2447,8 @@
                 `;
             });
 
-            // Admin controls at bottom
-            if (isAdmin) {
-                html += `
-                    <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('clearAll')" style="flex: 1;">Tümünü Sil</button>
-                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('endSession')" style="flex: 1;">Oturumu Sonlandır</button>
-                    </div>
-                `;
-            } else {
+            // Participant leave button
+            if (!isAdmin) {
                 html += `
                     <div style="margin-top: 20px;">
                         <button class="btn-primary btn-secondary" onclick="window.leaveSession()">Oturumdan Ayrıl</button>
@@ -2465,6 +2542,9 @@
 
         document.getElementById('confirmAddParticipantSession').addEventListener('click', async () => {
             const name = document.getElementById('newParticipantNameInput').value.trim();
+            const gender = document.getElementById('newParticipantGenderInput').value;
+            const weight = document.getElementById('newParticipantWeightInput').value ? 
+                parseInt(document.getElementById('newParticipantWeightInput').value) : null;
             
             if (!name) {
                 showToast('Lütfen bir isim girin', 'warning');
@@ -2483,6 +2563,8 @@
             const newId = generateParticipantId();
             const newParticipant = {
                 name: name,
+                gender: gender,
+                weight: weight,
                 userId: null,
                 addedAt: Date.now(),
                 addedBy: 'admin',
@@ -2492,6 +2574,9 @@
             try {
                 await update(ref(database, `sessions/${currentSession}/participants/${newId}`), newParticipant);
                 addParticipantSessionModal.classList.add('hidden');
+                document.getElementById('newParticipantNameInput').value = '';
+                document.getElementById('newParticipantWeightInput').value = '';
+                document.getElementById('newParticipantGenderInput').value = 'male';
                 showToast(`${name} eklendi`, 'success');
             } catch (error) {
                 alert('Katılımcı eklenirken hata: ' + error.message);
@@ -2594,6 +2679,7 @@
             console.log('Participant:', participant?.name);
             console.log('Adding drink:', existingDrinkType);
             console.log('History length:', history.length);
+            console.log('Current user is admin?', isAdmin);
             
             if (history.length > 0) {
                 const now = Date.now();
@@ -2601,6 +2687,7 @@
                 const timeSinceLastDrink = (now - lastEntry.timestamp) / 1000 / 60; // minutes
                 
                 console.log('Last drink:', lastEntry.drink);
+                console.log('Last drink added by:', lastEntry.addedBy);
                 console.log('Time since last:', timeSinceLastDrink.toFixed(2), 'minutes');
                 
                 // Calculate average interval if we have multiple drinks
@@ -2625,20 +2712,39 @@
                 if (lastEntry.drink.toLowerCase() === existingDrinkType.toLowerCase() && 
                     timeSinceLastDrink < threshold) {
                     console.log('🚨 SHOWING DUPLICATE WARNING!');
+                    
                     const minutes = Math.floor(timeSinceLastDrink);
                     const seconds = Math.floor((timeSinceLastDrink - minutes) * 60);
                     const timeAgo = minutes > 0 ? `${minutes} dakika ${seconds} saniye` : `${seconds} saniye`;
                     
+                    // Determine who added the last drink
+                    let addedByText = '';
+                    if (lastEntry.addedBy === 'admin') {
+                        addedByText = 'Admin tarafından';
+                    } else if (lastEntry.addedBy === participantId) {
+                        addedByText = `${participant.name} tarafından (kendisi)`;
+                    } else {
+                        const adderParticipant = sessionData.participants[lastEntry.addedBy];
+                        if (adderParticipant) {
+                            addedByText = `${adderParticipant.name} tarafından`;
+                        } else {
+                            addedByText = 'Bilinmeyen kişi tarafından';
+                        }
+                    }
+                    
                     const confirmMessage = `⚠️ DİKKAT: Mükerrer Giriş Kontrolü\n\n` +
-                        `${participant.name} için ${timeAgo} önce "${lastEntry.drink}" eklendi.\n\n` +
+                        `${participant.name} için ${timeAgo} önce "${lastEntry.drink}" eklendi.\n` +
+                        `${addedByText}\n\n` +
                         `Şimdi tekrar "${existingDrinkType}" eklemek istiyorsunuz.\n\n` +
                         `Ortalama içme aralığı: ${Math.round(threshold)} dakika\n` +
-                        `Son içki: ${timeAgo} önce (çok kısa!)\n\n` +
+                        `Son ekleme: ${timeAgo} önce (çok kısa!)\n\n` +
                         `Bu mükerrer bir giriş olabilir.\n` +
                         `Yine de eklemek istediğinize emin misiniz?`;
                     
                     if (!confirm(confirmMessage)) {
                         console.log('❌ User cancelled duplicate entry');
+                        addDrinkModal.classList.add('hidden');
+                        pendingAction = null;
                         return; // User cancelled
                     }
                     console.log('✅ User confirmed duplicate entry');
