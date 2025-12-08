@@ -204,6 +204,21 @@
             font-weight: 600;
         }
 
+        /* Gender Radio Button Styles */
+        input[type="radio"]:checked + span + span {
+            color: #4a90e2 !important;
+        }
+        
+        label:has(input[type="radio"]:checked) {
+            border-color: #4a90e2 !important;
+            background: #1e2a3d !important;
+        }
+        
+        label:has(input[type="radio"]):hover {
+            border-color: #4a90e2 !important;
+            background: #1e2a3d !important;
+        }
+
         .drink-item {
             display: flex;
             justify-content: space-between;
@@ -857,14 +872,23 @@
                 <label>Katılımcı Bilgileri:</label>
                 <input type="text" id="participantNameInput" placeholder="İsim" autocomplete="off" style="margin-bottom: 10px;">
                 
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <select id="participantGenderInput" style="flex: 1; padding: 12px; background: #0f1419; border: 1px solid #2a2a3e; border-radius: 8px; color: #e0e0e0; font-size: 16px;">
-                        <option value="male">Erkek</option>
-                        <option value="female">Kadın</option>
-                    </select>
-                    
-                    <input type="number" id="participantWeightInput" placeholder="Kilo (kg) - isteğe bağlı" min="40" max="200" style="flex: 1; padding: 12px; background: #0f1419; border: 1px solid #2a2a3e; border-radius: 8px; color: #e0e0e0; font-size: 16px;">
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; margin-bottom: 8px; color: #b0b0b0; font-size: 14px;">Cinsiyet:</label>
+                    <div style="display: flex; gap: 15px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: #1a2332; border: 2px solid #2a2a3e; border-radius: 8px; transition: all 0.2s;">
+                            <input type="radio" name="participantGender" value="male" checked style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-size: 20px;">♂️</span>
+                            <span style="color: #e0e0e0; font-weight: 500;">Erkek</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: #1a2332; border: 2px solid #2a2a3e; border-radius: 8px; transition: all 0.2s;">
+                            <input type="radio" name="participantGender" value="female" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-size: 20px;">♀️</span>
+                            <span style="color: #e0e0e0; font-weight: 500;">Kadın</span>
+                        </label>
+                    </div>
                 </div>
+                
+                <input type="number" id="participantWeightInput" placeholder="Kilo (kg) - isteğe bağlı" min="40" max="200" style="width: 100%; padding: 12px; background: #0f1419; border: 1px solid #2a2a3e; border-radius: 8px; color: #e0e0e0; font-size: 16px; margin-bottom: 10px;">
                 
                 <button class="btn-primary btn-success" id="addParticipantBtn" style="width: 100%; padding: 12px 20px;">+ Ekle</button>
             </div>
@@ -948,11 +972,19 @@
                 <input type="text" id="newParticipantNameInput" placeholder="İsim girin" autocomplete="off">
             </div>
             <div class="form-group">
-                <label>Cinsiyet:</label>
-                <select id="newParticipantGenderInput" style="width: 100%; padding: 12px; background: #0f1419; border: 1px solid #2a2a3e; border-radius: 8px; color: #e0e0e0; font-size: 16px;">
-                    <option value="male">Erkek</option>
-                    <option value="female">Kadın</option>
-                </select>
+                <label style="display: block; margin-bottom: 8px;">Cinsiyet:</label>
+                <div style="display: flex; gap: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: #1a2332; border: 2px solid #2a2a3e; border-radius: 8px; transition: all 0.2s;">
+                        <input type="radio" name="newParticipantGender" value="male" checked style="width: 18px; height: 18px; cursor: pointer;">
+                        <span style="font-size: 20px;">♂️</span>
+                        <span style="color: #e0e0e0; font-weight: 500;">Erkek</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: #1a2332; border: 2px solid #2a2a3e; border-radius: 8px; transition: all 0.2s;">
+                        <input type="radio" name="newParticipantGender" value="female" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span style="font-size: 20px;">♀️</span>
+                        <span style="color: #e0e0e0; font-weight: 500;">Kadın</span>
+                    </label>
+                </div>
             </div>
             <div class="form-group">
                 <label>Kilo (isteğe bağlı):</label>
@@ -1402,13 +1434,14 @@
             'abdullah': 'male', 'mahmut': 'male', 'orhan': 'male', 'cenk': 'male', 'umut': 'male',
             'serhat': 'male', 'engin': 'male', 'koray': 'male', 'samet': 'male', 'oğuz': 'male',
             'çağlar': 'male', 'tunç': 'male', 'görkem': 'male', 'kağan': 'male', 'çağan': 'male',
+            'yiğit': 'male', 'faruk': 'male', 'cüneyt': 'male', 'ali cem': 'male', 'saner': 'male', 'mert': 'male',
             
             // Female names
             'ayşe': 'female', 'fatma': 'female', 'emine': 'female', 'zeynep': 'female', 'elif': 'female',
             'merve': 'female', 'esra': 'female', 'gözde': 'female', 'selin': 'female', 'ece': 'female',
             'büşra': 'female', 'buse': 'female', 'şeyma': 'female', 'derya': 'female', 'betül': 'female',
             'hilal': 'female', 'ebru': 'female', 'yasemin': 'female', 'pınar': 'female', 'burcu': 'female',
-            'ceren': 'female', 'deniz': 'female', 'aslı': 'female', 'sinem': 'female', 'özge': 'female',
+            'ceren': 'female', 'aslı': 'female', 'sinem': 'female', 'özge': 'female',
             'tuğba': 'female', 'melike': 'female', 'nur': 'female', 'irem': 'female', 'seda': 'female',
             'duygu': 'female', 'damla': 'female', 'cansu': 'female', 'ipek': 'female', 'begüm': 'female',
             'şebnem': 'female', 'gamze': 'female', 'sibel': 'female', 'hande': 'female', 'dilara': 'female',
@@ -1416,7 +1449,8 @@
             'sevgi': 'female', 'serpil': 'female', 'müge': 'female', 'serap': 'female', 'tülay': 'female',
             'nilüfer': 'female', 'gül': 'female', 'gülşen': 'female', 'asya': 'female', 'ada': 'female',
             'defne': 'female', 'ela': 'female', 'nehir': 'female', 'miray': 'female', 'zehra': 'female',
-            'azra': 'female', 'aysun': 'female', 'aylin': 'female', 'ayça': 'female', 'berna': 'female'
+            'azra': 'female', 'aysun': 'female', 'aylin': 'female', 'ayça': 'female', 'berna': 'female',
+            'püren': 'female'
         };
         
         // Detect gender from Turkish name
@@ -2139,7 +2173,9 @@
             const name = e.target.value.trim();
             const detectedGender = detectGenderFromName(name);
             if (detectedGender) {
-                document.getElementById('participantGenderInput').value = detectedGender;
+                // Set radio button
+                const radioButton = document.querySelector(`input[name="participantGender"][value="${detectedGender}"]`);
+                if (radioButton) radioButton.checked = true;
             }
         });
 
@@ -2151,11 +2187,10 @@
 
         function addTempParticipant() {
             const nameInput = document.getElementById('participantNameInput');
-            const genderInput = document.getElementById('participantGenderInput');
             const weightInput = document.getElementById('participantWeightInput');
             
             const name = nameInput.value.trim();
-            const gender = genderInput.value;
+            const gender = document.querySelector('input[name="participantGender"]:checked').value;
             const weight = weightInput.value ? parseInt(weightInput.value) : null;
             
             if (!name) {
@@ -2177,7 +2212,8 @@
 
             nameInput.value = '';
             weightInput.value = '';
-            genderInput.value = 'male';
+            // Reset to male radio button
+            document.querySelector('input[name="participantGender"][value="male"]').checked = true;
             nameInput.focus();
             updateParticipantListUI();
         }
@@ -2647,7 +2683,9 @@
             const name = e.target.value.trim();
             const detectedGender = detectGenderFromName(name);
             if (detectedGender) {
-                document.getElementById('newParticipantGenderInput').value = detectedGender;
+                // Set radio button
+                const radioButton = document.querySelector(`input[name="newParticipantGender"][value="${detectedGender}"]`);
+                if (radioButton) radioButton.checked = true;
             }
         });
 
@@ -2657,7 +2695,7 @@
 
         document.getElementById('confirmAddParticipantSession').addEventListener('click', async () => {
             const name = document.getElementById('newParticipantNameInput').value.trim();
-            const gender = document.getElementById('newParticipantGenderInput').value;
+            const gender = document.querySelector('input[name="newParticipantGender"]:checked').value;
             const weight = document.getElementById('newParticipantWeightInput').value ? 
                 parseInt(document.getElementById('newParticipantWeightInput').value) : null;
             
@@ -2691,7 +2729,8 @@
                 addParticipantSessionModal.classList.add('hidden');
                 document.getElementById('newParticipantNameInput').value = '';
                 document.getElementById('newParticipantWeightInput').value = '';
-                document.getElementById('newParticipantGenderInput').value = 'male';
+                // Reset to male radio button
+                document.querySelector('input[name="newParticipantGender"][value="male"]').checked = true;
                 showToast(`${name} eklendi`, 'success');
             } catch (error) {
                 alert('Katılımcı eklenirken hata: ' + error.message);
