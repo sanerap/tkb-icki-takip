@@ -1386,6 +1386,53 @@
             return { level: 'Çok Sarhoş', emoji: '🤢', color: '#dc3545', promille };
         }
 
+        // Turkish names gender database (common names)
+        const TURKISH_NAMES = {
+            // Male names
+            'ahmet': 'male', 'mehmet': 'male', 'ali': 'male', 'mustafa': 'male', 'hasan': 'male',
+            'hüseyin': 'male', 'ibrahim': 'male', 'ismail': 'male', 'murat': 'male', 'emre': 'male',
+            'burak': 'male', 'fatih': 'male', 'kemal': 'male', 'osman': 'male', 'cem': 'male',
+            'can': 'male', 'berk': 'male', 'efe': 'male', 'eren': 'male', 'kaan': 'male',
+            'serkan': 'male', 'volkan': 'male', 'özgür': 'male', 'onur': 'male', 'barış': 'male',
+            'erhan': 'male', 'selim': 'male', 'sinan': 'male', 'taner': 'male', 'arda': 'male',
+            'yusuf': 'male', 'ömer': 'male', 'enes': 'male', 'furkan': 'male', 'yunus': 'male',
+            'buğra': 'male', 'tolga': 'male', 'taylan': 'male', 'ege': 'male', 'alp': 'male',
+            'kerem': 'male', 'ufuk': 'male', 'deniz': 'male', 'tuna': 'male', 'doruk': 'male',
+            'halil': 'male', 'süleyman': 'male', 'recep': 'male', 'ramazan': 'male', 'yasin': 'male',
+            'abdullah': 'male', 'mahmut': 'male', 'orhan': 'male', 'cenk': 'male', 'umut': 'male',
+            'serhat': 'male', 'engin': 'male', 'koray': 'male', 'samet': 'male', 'oğuz': 'male',
+            'çağlar': 'male', 'tunç': 'male', 'görkem': 'male', 'kağan': 'male', 'çağan': 'male',
+            
+            // Female names
+            'ayşe': 'female', 'fatma': 'female', 'emine': 'female', 'zeynep': 'female', 'elif': 'female',
+            'merve': 'female', 'esra': 'female', 'gözde': 'female', 'selin': 'female', 'ece': 'female',
+            'büşra': 'female', 'buse': 'female', 'şeyma': 'female', 'derya': 'female', 'betül': 'female',
+            'hilal': 'female', 'ebru': 'female', 'yasemin': 'female', 'pınar': 'female', 'burcu': 'female',
+            'ceren': 'female', 'deniz': 'female', 'aslı': 'female', 'sinem': 'female', 'özge': 'female',
+            'tuğba': 'female', 'melike': 'female', 'nur': 'female', 'irem': 'female', 'seda': 'female',
+            'duygu': 'female', 'damla': 'female', 'cansu': 'female', 'ipek': 'female', 'begüm': 'female',
+            'şebnem': 'female', 'gamze': 'female', 'sibel': 'female', 'hande': 'female', 'dilara': 'female',
+            'nisa': 'female', 'rabia': 'female', 'hatice': 'female', 'kübra': 'female', 'zeliha': 'female',
+            'sevgi': 'female', 'serpil': 'female', 'müge': 'female', 'serap': 'female', 'tülay': 'female',
+            'nilüfer': 'female', 'gül': 'female', 'gülşen': 'female', 'asya': 'female', 'ada': 'female',
+            'defne': 'female', 'ela': 'female', 'nehir': 'female', 'miray': 'female', 'zehra': 'female',
+            'azra': 'female', 'aysun': 'female', 'aylin': 'female', 'ayça': 'female', 'berna': 'female'
+        };
+        
+        // Detect gender from Turkish name
+        function detectGenderFromName(name) {
+            if (!name) return null;
+            const normalized = name.trim().toLowerCase()
+                .replace(/ı/g, 'i')
+                .replace(/ğ/g, 'g')
+                .replace(/ü/g, 'u')
+                .replace(/ş/g, 's')
+                .replace(/ö/g, 'o')
+                .replace(/ç/g, 'c');
+            
+            return TURKISH_NAMES[normalized] || null;
+        }
+
         // Session data
         let sessionData = {
             participants: {},
@@ -2087,6 +2134,15 @@
             document.getElementById('participantNameInput').focus();
         });
 
+        // Auto-detect gender from name
+        document.getElementById('participantNameInput').addEventListener('input', (e) => {
+            const name = e.target.value.trim();
+            const detectedGender = detectGenderFromName(name);
+            if (detectedGender) {
+                document.getElementById('participantGenderInput').value = detectedGender;
+            }
+        });
+
         // Add Participant to temp list
         document.getElementById('addParticipantBtn').addEventListener('click', addTempParticipant);
         document.getElementById('participantNameInput').addEventListener('keypress', (e) => {
@@ -2291,10 +2347,14 @@
                 const participantSelect = document.getElementById('participantSelect');
                 participantSelect.innerHTML = '<option value="">Seçin...</option>';
                 
-                Object.entries(data.participants).forEach(([id, participant]) => {
-                    if (participant.isActive) {
-                        participantSelect.innerHTML += `<option value="${id}">${participant.name}</option>`;
-                    }
+                // Sort participants alphabetically by name
+                const sortedParticipants = Object.entries(data.participants)
+                    .filter(([id, participant]) => participant.isActive)
+                    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'tr'));
+                
+                sortedParticipants.forEach(([id, participant]) => {
+                    const genderIcon = participant.gender === 'male' ? '♂️' : participant.gender === 'female' ? '♀️' : '';
+                    participantSelect.innerHTML += `<option value="${id}">${genderIcon} ${participant.name}</option>`;
                 });
 
                 document.getElementById('joiningSessionCode').textContent = code;
@@ -2580,6 +2640,15 @@
 
         document.getElementById('cancelAddParticipantSession').addEventListener('click', () => {
             addParticipantSessionModal.classList.add('hidden');
+        });
+
+        // Auto-detect gender for session participant addition
+        document.getElementById('newParticipantNameInput').addEventListener('input', (e) => {
+            const name = e.target.value.trim();
+            const detectedGender = detectGenderFromName(name);
+            if (detectedGender) {
+                document.getElementById('newParticipantGenderInput').value = detectedGender;
+            }
         });
 
         document.getElementById('newParticipantNameInput').addEventListener('keypress', (e) => {
