@@ -814,6 +814,8 @@
     </style>
     <!-- QR Code Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -2066,6 +2068,13 @@
                         </div>
                     </div>
                     
+                    <div class="stats-chart" style="margin: 20px 0; padding: 20px; background: #1a1f2e; border-radius: 12px;">
+                        <h3 style="color: #e0e0e0; margin: 0 0 15px 0;">📊 İçki Türü Dağılımı</h3>
+                        <div style="max-width: 400px; margin: 0 auto;">
+                            <canvas id="drinkTypeChart"></canvas>
+                        </div>
+                    </div>
+                    
                     <div class="stats-ranking">
                         <h3 style="color: #e0e0e0; margin: 20px 0 15px 0;">🏆 Sarhoşluk Sıralaması</h3>
             `;
@@ -2101,6 +2110,83 @@
             `;
             
             statsContent.innerHTML = html;
+            
+            // Render pie chart after DOM is updated
+            setTimeout(() => {
+                const ctx = document.getElementById('drinkTypeChart');
+                if (!ctx) return;
+                
+                // Destroy existing chart if any
+                if (window.drinkTypeChartInstance) {
+                    window.drinkTypeChartInstance.destroy();
+                }
+                
+                // Prepare data
+                const labels = Object.keys(drinkTypeCounts);
+                const data = Object.values(drinkTypeCounts);
+                const colors = labels.map(type => {
+                    // Color based on drink icon
+                    const icon = getDrinkIcon(type);
+                    if (icon === '🍺') return '#FFB900';
+                    if (icon === '🍷') return '#E74856';
+                    if (icon === '🍸') return '#00BCF2';
+                    if (icon === '🥃') return '#C19A6B';
+                    if (icon === '🍹') return '#FF6B9D';
+                    if (icon === '🍾') return '#FFD700';
+                    if (icon === '🥂') return '#FFE4B5';
+                    if (icon === '🍶') return '#F0F0F0';
+                    if (icon === '🥛') return '#E8E8E8';
+                    return '#4A90E2';
+                });
+                
+                // Create chart
+                window.drinkTypeChartInstance = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels.map(type => `${getDrinkIcon(type)} ${type}`),
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderColor: '#1a1f2e',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#e0e0e0',
+                                    padding: 15,
+                                    font: {
+                                        size: 13
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#0f1419',
+                                titleColor: '#e0e0e0',
+                                bodyColor: '#b0b0b0',
+                                borderColor: '#2a2a3e',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: ${value} adet (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }, 100);
         }
 
         function initializeApp() {
@@ -2554,7 +2640,7 @@
                         
                         ${drinkEntries.length > 0 ? drinkEntries.map(([drinkType, quantity]) => {
                             const drinkIcon = getDrinkIcon(drinkType);
-                            const icons = drinkIcon.repeat(Math.min(quantity, 10)); // Max 10 icons
+                            const icons = drinkIcon.repeat(Math.min(quantity, 12)); // Max 12 icons (2 rows of 6)
                             return `
                             <div class="drink-item">
                                 <div class="drink-info">
