@@ -1021,7 +1021,7 @@
                     <button type="button" class="icon-btn" data-icon="🥂">🥂</button>
                     <button type="button" class="icon-btn" data-icon="🍶">🍶</button>
                     <button type="button" class="icon-btn" data-icon="🥛">🥛</button>
-                    <button type="button" class="icon-btn" data-icon="🥤">🥤</button>
+                    <button type="button" class="icon-btn" data-icon="🧉">🧉</button>
                 </div>
                 <input type="hidden" id="selectedIcon" value="🍹">
             </div>
@@ -1250,14 +1250,15 @@
         const DRINK_ICONS = {
             '🍺': ['Bira', 'Beer', 'Efes', 'Tuborg', 'Bomonti'],
             '🍷': ['Şarap', 'Wine', 'Kırmızı Şarap', 'Beyaz Şarap'],
-            '🍸': ['Kokteyl', 'Cocktail', 'Martini', 'Mojito', 'Margarita'],
+            '🍸': ['Kokteyl', 'Cocktail', 'Mojito', 'Margarita'],
             '🥃': ['Viski', 'Whisky', 'Whiskey', 'Bourbon', 'Scotch'],
             '🍹': ['Cin Tonik', 'Gin', 'Tonic', 'Vodka Portakal'],
             '🍾': ['Şampanya', 'Champagne', 'Prosecco'],
             '🥂': ['Şerefe', 'Toast', 'Celebration'],
-            '🍶': ['Sake', 'Rakı', 'Rak', 'Raki'],
-            '🧃': ['Shot', 'Tekila', 'Tequila', 'Jäger'],
-            '🥤': ['Meşrubat', 'Kola', 'Fanta', 'Sprite', 'Soda']
+            '🍶': ['Sake', 'Saki'],
+            '🥛': ['Rakı', 'Rak', 'Raki', 'Yeni Rakı'],
+            '🧉': ['Martini', 'Dry Martini', 'Espresso Martini'],
+            '🥤': ['Shot', 'Tekila', 'Tequila', 'Jäger', 'Vodka']
         };
 
         // Get icon for drink type
@@ -2127,16 +2128,17 @@
                 const colors = labels.map(type => {
                     // Color based on drink icon
                     const icon = getDrinkIcon(type);
-                    if (icon === '🍺') return '#FFB900';
-                    if (icon === '🍷') return '#E74856';
-                    if (icon === '🍸') return '#00BCF2';
-                    if (icon === '🥃') return '#C19A6B';
-                    if (icon === '🍹') return '#FF6B9D';
-                    if (icon === '🍾') return '#FFD700';
-                    if (icon === '🥂') return '#FFE4B5';
-                    if (icon === '🍶') return '#F0F0F0';
-                    if (icon === '🥛') return '#E8E8E8';
-                    return '#4A90E2';
+                    if (icon === '🍺') return '#FFB900'; // Bira - Sarı
+                    if (icon === '🍷') return '#E74856'; // Şarap - Kırmızı
+                    if (icon === '🍸') return '#00BCF2'; // Kokteyl - Mavi
+                    if (icon === '🥃') return '#C19A6B'; // Viski - Kahve
+                    if (icon === '🍹') return '#FF6B9D'; // Tropikal - Pembe
+                    if (icon === '🍾') return '#FFD700'; // Şampanya - Altın
+                    if (icon === '🥂') return '#FFE4B5'; // Kadeh - Bej
+                    if (icon === '🍶') return '#F0F0F0'; // Sake - Beyaz
+                    if (icon === '🥛') return '#E8E8E8'; // Rakı - Gri-beyaz
+                    if (icon === '🧉') return '#90EE90'; // Martini - Açık yeşil
+                    return '#4A90E2'; // Default - Mavi
                 });
                 
                 // Create chart
