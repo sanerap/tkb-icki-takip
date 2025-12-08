@@ -1597,13 +1597,21 @@
             const allNotifications = sessionData.notifications || {};
             const userNotifications = allNotifications[userId] || [];
             
-            if (userNotifications.length === 0) {
+            // Get deleted notifications for current user
+            const deletedNotifications = (sessionData.deletedNotifications || {})[userId] || [];
+            
+            // Filter out deleted notifications
+            const activeNotifications = userNotifications.filter(notif => 
+                !deletedNotifications.includes(notif.id)
+            );
+            
+            if (activeNotifications.length === 0) {
                 notificationsContent.innerHTML = '<div class="empty-notifications">Henüz bildirim yok</div>';
                 return;
             }
 
             // Sort by timestamp, oldest first
-            const sortedNotifications = [...userNotifications].sort((a, b) => a.timestamp - b.timestamp);
+            const sortedNotifications = [...activeNotifications].sort((a, b) => a.timestamp - b.timestamp);
 
             let html = '';
             
@@ -1653,15 +1661,28 @@
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
 
-            // Remove notification only from current user's list
+            // Track deleted notifications
             const notifications = { ...(sessionData.notifications || {}) };
+            const deletedNotifications = { ...(sessionData.deletedNotifications || {}) };
+            
+            if (!deletedNotifications[userId]) {
+                deletedNotifications[userId] = [];
+            }
+            
+            // Add to deleted list
+            if (!deletedNotifications[userId].includes(notificationId)) {
+                deletedNotifications[userId].push(notificationId);
+            }
+            
+            // Remove notification from active list
             if (notifications[userId]) {
                 notifications[userId] = notifications[userId].filter(n => n.id !== notificationId);
             }
 
             try {
                 await update(ref(database, `sessions/${currentSession}`), {
-                    notifications: notifications
+                    notifications: notifications,
+                    deletedNotifications: deletedNotifications
                 });
             } catch (error) {
                 alert('Bildirim silinirken hata: ' + error.message);
@@ -1679,11 +1700,26 @@
             }
 
             const notifications = { ...(sessionData.notifications || {}) };
+            const deletedNotifications = { ...(sessionData.deletedNotifications || {}) };
+            
+            if (!deletedNotifications[userId]) {
+                deletedNotifications[userId] = [];
+            }
+            
+            // Track all notification IDs as deleted
+            userNotifications.forEach(notif => {
+                if (!deletedNotifications[userId].includes(notif.id)) {
+                    deletedNotifications[userId].push(notif.id);
+                }
+            });
+            
+            // Clear active notifications
             notifications[userId] = [];
 
             try {
                 await update(ref(database, `sessions/${currentSession}`), {
-                    notifications: notifications
+                    notifications: notifications,
+                    deletedNotifications: deletedNotifications
                 });
                 showToast('Tüm bildirimler silindi', 'success');
             } catch (error) {
@@ -1769,7 +1805,16 @@
         function updateNotificationCount() {
             const allNotifications = sessionData.notifications || {};
             const userNotifications = allNotifications[userId] || [];
-            const count = userNotifications.length;
+            
+            // Get deleted notifications for current user
+            const deletedNotifications = (sessionData.deletedNotifications || {})[userId] || [];
+            
+            // Filter out deleted notifications
+            const activeNotifications = userNotifications.filter(notif => 
+                !deletedNotifications.includes(notif.id)
+            );
+            
+            const count = activeNotifications.length;
             
             if (count > 0) {
                 notificationCount.textContent = count;
@@ -2353,19 +2398,6 @@
         function renderMainContent() {
             let html = '';
 
-            if (isAdmin) {
-                html += `
-                    <div class="admin-controls">
-                        <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
-                        <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Admin Kodu</button>
-                    </div>
-                    <div style="margin-top: 10px; display: flex; gap: 10px;">
-                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('clearAll')" style="flex: 1;">Tümünü Sil</button>
-                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('endSession')" style="flex: 1;">Oturumu Sonlandır</button>
-                    </div>
-                `;
-            }
-
             // Render participants
             const now = Date.now();
             const participants = sessionData.participants || {};
@@ -2446,6 +2478,20 @@
                     </div>
                 `;
             });
+
+            // Admin controls at bottom
+            if (isAdmin) {
+                html += `
+                    <div class="admin-controls" style="margin-top: 20px;">
+                        <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
+                        <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Admin Kodu</button>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; gap: 10px;">
+                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('clearAll')" style="flex: 1;">Tümünü Sil</button>
+                        <button class="btn-primary btn-danger" onclick="window.requestAdminAction('endSession')" style="flex: 1;">Oturumu Sonlandır</button>
+                    </div>
+                `;
+            }
 
             // Participant leave button
             if (!isAdmin) {
@@ -2657,12 +2703,20 @@
         });
 
         document.getElementById('confirmAddDrink').addEventListener('click', async () => {
-            if (!pendingAction || pendingAction.type !== 'addDrink') return;
+            console.log('🔵 confirmAddDrink clicked!');
+            console.log('pendingAction:', pendingAction);
+            
+            if (!pendingAction || pendingAction.type !== 'addDrink') {
+                console.log('❌ No pending action or wrong type, returning');
+                return;
+            }
 
             const drinkType = document.getElementById('drinkTypeInput').value.trim();
             const quantity = parseInt(document.getElementById('drinkQuantityInput').value);
             const selectedIcon = document.getElementById('selectedIcon').value;
             const participantId = pendingAction.participantId;
+
+            console.log('📝 Input values:', { drinkType, quantity, participantId });
 
             if (!drinkType || quantity < 1) {
                 showToast('Lütfen geçerli bir içki türü ve miktar girin', 'warning');
@@ -2670,7 +2724,10 @@
             }
 
             const participant = sessionData.participants[participantId];
+            console.log('👤 Participant:', participant);
+            
             const existingDrinkType = (sessionData.drinkTypes || []).find(d => d.toLowerCase() === drinkType.toLowerCase()) || drinkType;
+            console.log('🍺 Drink type resolved to:', existingDrinkType);
             
             // DUPLICATE DETECTION: Check if same drink added too quickly
             const history = sessionData.drinkHistory?.[participantId] || [];
@@ -2827,6 +2884,8 @@
 
         // Adjust Drink
         window.adjustDrink = async function(participantId, drinkType, change) {
+            console.log('🔵 adjustDrink called:', { participantId, drinkType, change });
+            
             if (!isAdmin && participantId !== currentParticipantId) return;
 
             const participant = sessionData.participants[participantId];
@@ -2866,6 +2925,82 @@
                     alert('İstek gönderilirken hata: ' + error.message);
                 }
                 return;
+            }
+
+            // DUPLICATE DETECTION for increase (+) button
+            if (change > 0) {
+                const history = sessionData.drinkHistory?.[participantId] || [];
+                
+                console.log('=== DUPLICATE CHECK (+ button) ===');
+                console.log('Participant:', participant?.name);
+                console.log('Adding drink:', drinkType);
+                console.log('History length:', history.length);
+                
+                if (history.length > 0) {
+                    const now = Date.now();
+                    const lastEntry = [...history].sort((a, b) => b.timestamp - a.timestamp)[0];
+                    const timeSinceLastDrink = (now - lastEntry.timestamp) / 1000 / 60; // minutes
+                    
+                    console.log('Last drink:', lastEntry.drink);
+                    console.log('Time since last:', timeSinceLastDrink.toFixed(2), 'minutes');
+                    
+                    // Calculate threshold
+                    let threshold = 5; // Default: 5 minutes
+                    
+                    if (history.length >= 2) {
+                        const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+                        const intervals = [];
+                        for (let i = 0; i < Math.min(sortedHistory.length - 1, 5); i++) {
+                            intervals.push((sortedHistory[i].timestamp - sortedHistory[i + 1].timestamp) / 1000 / 60);
+                        }
+                        const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                        threshold = Math.max(avgInterval * 0.5, 3);
+                    }
+                    
+                    console.log('Threshold:', threshold.toFixed(2), 'minutes');
+                    console.log('Same drink?', lastEntry.drink.toLowerCase() === drinkType.toLowerCase());
+                    console.log('Too fast?', timeSinceLastDrink < threshold);
+                    
+                    // If adding same drink type too quickly, ask for confirmation
+                    if (lastEntry.drink.toLowerCase() === drinkType.toLowerCase() && 
+                        timeSinceLastDrink < threshold) {
+                        console.log('🚨 SHOWING DUPLICATE WARNING (+ button)!');
+                        
+                        const minutes = Math.floor(timeSinceLastDrink);
+                        const seconds = Math.floor((timeSinceLastDrink - minutes) * 60);
+                        const timeAgo = minutes > 0 ? `${minutes} dakika ${seconds} saniye` : `${seconds} saniye`;
+                        
+                        // Determine who added the last drink
+                        let addedByText = '';
+                        if (lastEntry.addedBy === 'admin') {
+                            addedByText = 'Admin tarafından';
+                        } else if (lastEntry.addedBy === participantId) {
+                            addedByText = `${participant.name} tarafından (kendisi)`;
+                        } else {
+                            const adderParticipant = sessionData.participants[lastEntry.addedBy];
+                            if (adderParticipant) {
+                                addedByText = `${adderParticipant.name} tarafından`;
+                            } else {
+                                addedByText = 'Bilinmeyen kişi tarafından';
+                            }
+                        }
+                        
+                        const dupMessage = `⚠️ DİKKAT: Mükerrer Giriş Kontrolü\n\n` +
+                            `${participant.name} için ${timeAgo} önce "${lastEntry.drink}" eklendi.\n` +
+                            `${addedByText}\n\n` +
+                            `Şimdi tekrar "${drinkType}" eklemek istiyorsunuz.\n\n` +
+                            `Ortalama içme aralığı: ${Math.round(threshold)} dakika\n` +
+                            `Son ekleme: ${timeAgo} önce (çok kısa!)\n\n` +
+                            `Bu mükerrer bir giriş olabilir.\n` +
+                            `Yine de eklemek istediğinize emin misiniz?`;
+                        
+                        if (!confirm(dupMessage)) {
+                            console.log('❌ User cancelled duplicate entry (+ button)');
+                            return; // User cancelled
+                        }
+                        console.log('✅ User confirmed duplicate entry (+ button)');
+                    }
+                }
             }
 
             // Admin can adjust directly
