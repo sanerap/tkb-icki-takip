@@ -811,6 +811,76 @@
             font-size: 13px;
             margin-top: 20px;
         }
+
+        /* Legal Limit Warning Badges */
+        .promil-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .promil-safe {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .promil-caution {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .promil-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+            border: 1px solid #ff9800;
+        }
+
+        .promil-danger {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .participant-status {
+            padding: 12px;
+            margin-top: 10px;
+            background: #1a1f2e;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .status-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            color: #b0b0b0;
+        }
+
+        .status-value {
+            color: #e0e0e0;
+            font-weight: 600;
+        }
     </style>
     <!-- QR Code Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -2104,6 +2174,15 @@
             html += `
                     </div>
                     
+                    <div class="stats-disclaimer" style="background: #2a1f1f; border: 2px solid #dc3545; color: #ff6b6b;">
+                        <div style="font-size: 18px; margin-bottom: 10px;">🚫 YASAL LİMİT UYARISI</div>
+                        <div style="font-size: 14px; line-height: 1.6;">
+                            <strong>Türkiye'de yasal alkol limiti: 0.50‰</strong><br>
+                            0.50‰ ve üzeri: ARAÇ KULLANMAK YASAK!<br>
+                            Ceza: 4,506-9,012 TL + Ehliyet iptali (6 ay - 2 yıl)
+                        </div>
+                    </div>
+                    
                     <div class="stats-disclaimer">
                         ⚠️ Bu değerler tahminidir ve kişiden kişiye değişir. Sorumlu içki tüketimi önemlidir!
                     </div>
@@ -2658,6 +2737,50 @@
                                 ` : ''}
                             </div>
                         `}).join('') : '<div class="empty-state" style="padding: 10px 0; font-size: 14px;">Henüz içki eklenmedi</div>'}
+                        
+                        ${(() => {
+                            // Calculate promil and show status
+                            const alcoholGrams = calculateTotalAlcohol(pid);
+                            const drunknessInfo = getDrunknessLevel(alcoholGrams, pid);
+                            const promil = drunknessInfo.promille;
+                            
+                            // Get participant info for debugging
+                            const participant = sessionData.participants[pid];
+                            const weight = participant.weight || (participant.gender === 'female' ? 65 : 75);
+                            const genderText = participant.gender === 'female' ? 'Kadın' : 'Erkek';
+                            
+                            let badge = '';
+                            let legalWarning = '';
+                            let debugInfo = '';
+                            
+                            // Add debug info if promil seems wrong
+                            if (promil > 2.0 && alcoholGrams < 100) {
+                                debugInfo = `<div style="color: #ffc107; font-size: 11px; margin-top: 5px;">ℹ️ ${genderText}, ${weight}kg, ${alcoholGrams.toFixed(0)}g alkol</div>`;
+                            }
+                            
+                            if (promil === 0) {
+                                badge = '<div class="promil-badge promil-safe">😊 Ayık - 0.00‰</div>';
+                            } else if (promil < 0.30) {
+                                badge = `<div class="promil-badge promil-safe">🙂 ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
+                            } else if (promil < 0.50) {
+                                badge = `<div class="promil-badge promil-caution">⚠️ ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
+                                legalWarning = '<div style="color: #ffc107; font-size: 12px; margin-top: 5px;">⚠️ Dikkat: Yasal limite yaklaşıyorsunuz</div>';
+                            } else if (promil < 1.00) {
+                                badge = `<div class="promil-badge promil-warning">🚫 ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
+                                legalWarning = '<div style="color: #ff9800; font-size: 13px; margin-top: 5px; font-weight: 600;">🚫 ARAÇ KULLANMA! Yasal limit: 0.50‰</div>';
+                            } else {
+                                badge = `<div class="promil-badge promil-danger">☠️ ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
+                                legalWarning = '<div style="color: #dc3545; font-size: 13px; margin-top: 5px; font-weight: 600;">🚫 ÇOK TEHLİKELİ! ARAÇ KULLANMA!</div>';
+                            }
+                            
+                            return `
+                                <div class="participant-status">
+                                    ${badge}
+                                    ${legalWarning}
+                                    ${debugInfo}
+                                </div>
+                            `;
+                        })()}
                         
                         ${canEdit ? `<button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
                     </div>
