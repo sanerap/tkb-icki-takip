@@ -912,8 +912,8 @@
         <!-- Connection Status -->
         <div id="connectionStatus" class="connection-status"></div>
         
-        <!-- Session Info (shown when in a session) -->
-        <div id="sessionInfo" class="session-info hidden">
+        <!-- Session Info (moved to bottom) -->
+        <div id="sessionInfo" class="session-info hidden" style="display: none;">
             <div class="session-code" id="sessionCodeDisplay"></div>
             <div class="session-role" id="sessionRole"></div>
         </div>
@@ -1943,6 +1943,17 @@
         // Generate welcome notifications for new participants
         async function generateWelcomeNotifications() {
             try {
+                // Check if user has joined this session before
+                const hasJoinedBefore = localStorage.getItem(`joined_${currentSession}_${userId}`);
+                
+                if (hasJoinedBefore) {
+                    // User has been here before, skip welcome notifications
+                    return;
+                }
+                
+                // Mark that user has joined this session
+                localStorage.setItem(`joined_${currentSession}_${userId}`, 'true');
+                
                 const sessionRef = ref(database, `sessions/${currentSession}`);
                 const snapshot = await get(sessionRef);
                 const data = snapshot.val();
@@ -2134,7 +2145,23 @@
                 
                 // Count drink types
                 Object.entries(participantDrinks).forEach(([type, qty]) => {
-                    drinkTypeCounts[type] = (drinkTypeCounts[type] || 0) + qty;
+                    // Group by drink category (based on icon)
+                    const icon = getDrinkIcon(type);
+                    let category = type;
+                    
+                    // Group similar drinks together
+                    if (icon === '🍺') category = 'Bira';
+                    else if (icon === '🍷') category = 'Şarap';
+                    else if (icon === '🍸') category = 'Kokteyl';
+                    else if (icon === '🥃') category = 'Viski';
+                    else if (icon === '🍹') category = 'Gin & Vodka';
+                    else if (icon === '🍾') category = 'Şampanya';
+                    else if (icon === '🥂') category = 'Kadeh';
+                    else if (icon === '🍶') category = 'Sake';
+                    else if (icon === '🥛') category = 'Rakı';
+                    else if (icon === '🧉') category = 'Martini';
+                    
+                    drinkTypeCounts[category] = (drinkTypeCounts[category] || 0) + qty;
                 });
                 
                 stats.push({
@@ -2420,12 +2447,11 @@
 
         function showSessionInfo() {
             sessionManagement.classList.add('hidden');
-            sessionInfo.classList.remove('hidden');
+            // sessionInfo stays hidden - moved to bottom
             tabNavigation.classList.remove('hidden');
-            sessionCodeDisplay.textContent = `Oturum: ${currentSession}`;
             
-            // Hide role display from top
-            sessionRole.style.display = 'none';
+            // Store session code for bottom display
+            window.currentSessionCode = currentSession;
 
             updateNotificationCount();
             if (isAdmin) {
@@ -2905,6 +2931,8 @@
             if (isAdmin) {
                 html += `
                     <div style="margin-top: 20px; padding: 15px; background: rgba(220, 53, 69, 0.1); border: 1px solid #dc3545; border-radius: 8px; text-align: center;">
+                        <div style="color: #888; font-size: 12px; margin-bottom: 8px;">Oturum Kodu</div>
+                        <div style="color: #dc3545; font-weight: 600; font-size: 18px; margin-bottom: 8px;">${currentSession}</div>
                         <div style="color: #dc3545; font-weight: 600; font-size: 16px;">👑 Yönetici</div>
                         <div style="color: #e0e0e0; font-size: 14px; margin-top: 5px;">
                             Toplam ${Object.values(sessionData.participants || {}).filter(p => p.isActive).length} kişi
@@ -2931,6 +2959,8 @@
                 
                 html += `
                     <div style="margin-top: 20px; padding: 15px; background: rgba(74, 144, 226, 0.1); border: 1px solid #4a90e2; border-radius: 8px; text-align: center;">
+                        <div style="color: #888; font-size: 12px; margin-bottom: 8px;">Oturum Kodu</div>
+                        <div style="color: #4a90e2; font-weight: 600; font-size: 18px; margin-bottom: 8px;">${currentSession}</div>
                         <div style="color: #4a90e2; font-weight: 600; font-size: 16px;">${participantName}</div>
                         <div style="color: #e0e0e0; font-size: 14px; margin-top: 5px;">
                             Toplam ${activeCount} kişi
@@ -4148,6 +4178,11 @@
         };
 
         function leaveSession() {
+            // Clear welcome notification flag for this session
+            if (currentSession && userId) {
+                localStorage.removeItem(`joined_${currentSession}_${userId}`);
+            }
+            
             currentSession = null;
             isAdmin = false;
             adminCode = null;
