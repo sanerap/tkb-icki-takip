@@ -1450,8 +1450,9 @@
         }
 
         // Convert grams to promille (BAC - Blood Alcohol Concentration)
-        // Using Widmark formula: BAC = (alcohol_grams / (body_weight_kg × r)) × 10
+        // Using Widmark formula: BAC (‰) = alcohol_grams / (body_weight_kg × r)
         // r = 0.68 for men, 0.55 for women (water distribution factor)
+        // Note: Result is already in ‰ (grams per liter), no need to multiply by 10
         // personalized based on participant's gender and weight
         function gramsToPromille(alcoholGrams, participantId) {
             const participant = sessionData.participants[participantId];
@@ -1459,7 +1460,7 @@
                 // Fallback to average male
                 const bodyWeight = 75; // kg
                 const r = 0.68; // men's distribution factor
-                return (alcoholGrams / (bodyWeight * r)) * 10;
+                return alcoholGrams / (bodyWeight * r);
             }
             
             // Use participant's weight or default based on gender
@@ -1471,7 +1472,7 @@
             // Distribution factor based on gender
             const r = participant.gender === 'female' ? 0.55 : 0.68;
             
-            const promille = (alcoholGrams / (bodyWeight * r)) * 10;
+            const promille = alcoholGrams / (bodyWeight * r);
             return promille;
         }
 
