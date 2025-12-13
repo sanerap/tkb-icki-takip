@@ -2422,20 +2422,10 @@
             sessionManagement.classList.add('hidden');
             sessionInfo.classList.remove('hidden');
             tabNavigation.classList.remove('hidden');
-            sessionCodeDisplay.textContent = currentSession;
+            sessionCodeDisplay.textContent = `Oturum: ${currentSession}`;
             
-            // Count active participants
-            const activeCount = sessionData.participants ? 
-                Object.values(sessionData.participants).filter(p => p.isActive).length : 0;
-            
-            if (isAdmin) {
-                sessionRole.textContent = `Yönetici (${activeCount} kişi)`;
-                sessionRole.className = 'session-role admin';
-            } else {
-                const participantName = sessionData.participants?.[currentParticipantId]?.name || 'Katılımcı';
-                sessionRole.textContent = `${participantName} (${activeCount} kişi)`;
-                sessionRole.className = 'session-role';
-            }
+            // Hide role display from top
+            sessionRole.style.display = 'none';
 
             updateNotificationCount();
             if (isAdmin) {
@@ -2914,7 +2904,13 @@
             // Admin controls at bottom
             if (isAdmin) {
                 html += `
-                    <div class="admin-controls" style="margin-top: 20px;">
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(220, 53, 69, 0.1); border: 1px solid #dc3545; border-radius: 8px; text-align: center;">
+                        <div style="color: #dc3545; font-weight: 600; font-size: 16px;">👑 Yönetici</div>
+                        <div style="color: #e0e0e0; font-size: 14px; margin-top: 5px;">
+                            Toplam ${Object.values(sessionData.participants || {}).filter(p => p.isActive).length} kişi
+                        </div>
+                    </div>
+                    <div class="admin-controls" style="margin-top: 10px;">
                         <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
                         <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Admin Kodu</button>
                     </div>
@@ -2929,9 +2925,18 @@
                     </div>
                 `;
             } else {
-                // Participant controls
+                // Participant info and controls
+                const participantName = sessionData.participants?.[currentParticipantId]?.name || 'Katılımcı';
+                const activeCount = Object.values(sessionData.participants || {}).filter(p => p.isActive).length;
+                
                 html += `
-                    <div style="margin-top: 20px;">
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(74, 144, 226, 0.1); border: 1px solid #4a90e2; border-radius: 8px; text-align: center;">
+                        <div style="color: #4a90e2; font-weight: 600; font-size: 16px;">${participantName}</div>
+                        <div style="color: #e0e0e0; font-size: 14px; margin-top: 5px;">
+                            Toplam ${activeCount} kişi
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
                         <button class="btn-primary" onclick="window.showQRCode()" style="width: 100%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 5px;">
                             📱 QR Kod Paylaş
                         </button>
