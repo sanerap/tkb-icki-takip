@@ -1204,6 +1204,23 @@
         </div>
     </div>
 
+    <!-- Participant History Modal -->
+    <div id="participantHistoryModal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-title">📋 İçki Geçmişi</div>
+            <div class="modal-message" id="historyParticipantName"></div>
+            
+            <div id="historyContent" style="max-height: 400px; overflow-y: auto; margin: 15px 0;">
+                <!-- History items will be inserted here -->
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn-primary btn-secondary" id="copyHistory">📋 Kopyala</button>
+                <button class="btn-primary" id="closeParticipantHistory">Kapat</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer"></div>
 
@@ -2201,6 +2218,64 @@
                         ⏰ <strong>Not:</strong> Zamanlamalar içkilerin masaya geldiği zamanı gösterir.<br>
                         ⚠️ Bu değerler tahminidir ve kişiden kişiye değişir. Sorumlu içki tüketimi önemlidir!
                     </div>
+                    
+                    <!-- Collapsed Drink History -->
+                    <div style="margin-top: 20px;">
+                        <details style="background: #1a1f2e; border-radius: 12px; padding: 15px; border: 1px solid #2a2a3e;">
+                            <summary style="cursor: pointer; color: #4a90e2; font-weight: 600; font-size: 16px; user-select: none;">
+                                📋 Detaylı İçki Geçmişi (Tüm Katılımcılar)
+                            </summary>
+                            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;" id="statsHistoryContent">
+                                ${(() => {
+                                    // Collect all drink history
+                                    const allHistory = [];
+                                    Object.entries(sessionData.participants || {}).forEach(([pid, participant]) => {
+                                        if (!participant.isActive) return;
+                                        const history = sessionData.drinkHistory?.[pid] || [];
+                                        history.forEach(entry => {
+                                            allHistory.push({
+                                                ...entry,
+                                                participantId: pid,
+                                                participantName: participant.name
+                                            });
+                                        });
+                                    });
+                                    
+                                    if (allHistory.length === 0) {
+                                        return '<div class="empty-notifications">Henüz içki eklenmedi</div>';
+                                    }
+                                    
+                                    // Sort by timestamp (newest first)
+                                    allHistory.sort((a, b) => b.timestamp - a.timestamp);
+                                    
+                                    return allHistory.map(entry => {
+                                        const date = new Date(entry.timestamp);
+                                        const timeStr = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                                        const dateStr = date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+                                        const icon = getDrinkIcon(entry.drink);
+                                        
+                                        return `
+                                            <div style="background: #0f1419; padding: 12px; border-radius: 8px; border-left: 3px solid #4a90e2;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                                        <span style="font-size: 24px;">${icon}</span>
+                                                        <div>
+                                                            <div style="color: #e0e0e0; font-weight: 600;">${entry.participantName}</div>
+                                                            <div style="color: #b0b0b0; font-size: 13px;">${entry.drink} × ${entry.quantity}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="text-align: right;">
+                                                        <div style="color: #4a90e2; font-weight: 600; font-size: 14px;">${timeStr}</div>
+                                                        <div style="color: #888; font-size: 12px;">${dateStr}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('');
+                                })()}
+                            </div>
+                        </details>
+                    </div>
                 </div>
             `;
             
@@ -2796,6 +2871,10 @@
                                 </div>
                             `;
                         })()}
+                        
+                        <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 8px;">
+                            📋 İçki Geçmişi
+                        </button>
                         
                         ${canEdit ? `<button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
                     </div>
@@ -3855,6 +3934,54 @@
             document.getElementById('showAdminCodeModal').classList.remove('hidden');
         };
 
+        // Show participant drink history
+        window.showParticipantHistory = function(participantId) {
+            const participant = sessionData.participants[participantId];
+            if (!participant) return;
+            
+            const history = sessionData.drinkHistory?.[participantId] || [];
+            
+            document.getElementById('historyParticipantName').textContent = `${participant.name} için geçmiş`;
+            
+            if (history.length === 0) {
+                document.getElementById('historyContent').innerHTML = '<div class="empty-notifications">Henüz içki eklenmedi</div>';
+            } else {
+                // Sort by timestamp (newest first)
+                const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+                
+                let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                sortedHistory.forEach(entry => {
+                    const date = new Date(entry.timestamp);
+                    const timeStr = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+                    const icon = getDrinkIcon(entry.drink);
+                    
+                    html += `
+                        <div style="background: #1a1f2e; padding: 12px; border-radius: 8px; border-left: 3px solid #4a90e2;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 24px;">${icon}</span>
+                                    <div>
+                                        <div style="color: #e0e0e0; font-weight: 600;">${entry.drink}</div>
+                                        <div style="color: #b0b0b0; font-size: 12px;">Miktar: ${entry.quantity}</div>
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: #4a90e2; font-weight: 600;">${timeStr}</div>
+                                    <div style="color: #888; font-size: 12px;">${dateStr}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                document.getElementById('historyContent').innerHTML = html;
+            }
+            
+            document.getElementById('participantHistoryModal').classList.remove('hidden');
+        };
+
         // Close show admin code modal
         // Close QR code modal
         document.getElementById('closeQRCode').addEventListener('click', () => {
@@ -3881,6 +4008,35 @@
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
                 showToast('Admin kodu kopyalandı!', 'success');
+            });
+        });
+
+        // Close participant history modal
+        document.getElementById('closeParticipantHistory').addEventListener('click', () => {
+            document.getElementById('participantHistoryModal').classList.add('hidden');
+        });
+
+        // Copy participant history to clipboard
+        document.getElementById('copyHistory').addEventListener('click', () => {
+            const participantName = document.getElementById('historyParticipantName').textContent.replace(' için geçmiş', '');
+            const historyItems = document.querySelectorAll('#historyContent > div > div');
+            
+            let text = `${participantName} - İçki Geçmişi\n\n`;
+            historyItems.forEach(item => {
+                const drinkName = item.querySelector('div > div > div:first-child')?.textContent || '';
+                const quantity = item.querySelector('div > div > div:last-child')?.textContent || '';
+                const time = item.querySelector('div:last-child > div:first-child')?.textContent || '';
+                const date = item.querySelector('div:last-child > div:last-child')?.textContent || '';
+                
+                if (drinkName) {
+                    text += `${date} ${time} - ${drinkName} - ${quantity}\n`;
+                }
+            });
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Geçmiş kopyalandı!', 'success');
+            }).catch(() => {
+                showToast('Kopyalama başarısız', 'error');
             });
         });
 
