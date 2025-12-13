@@ -622,6 +622,16 @@
             border-left-color: #28a745;
         }
 
+        .notification-item.participant_added {
+            border-left-color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .notification-item.participant_removed {
+            border-left-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+
         .notification-content {
             flex: 1;
         }
@@ -1215,7 +1225,6 @@
             </div>
             
             <div class="modal-buttons">
-                <button class="btn-primary btn-secondary" id="copyHistory">📋 Kopyala</button>
                 <button class="btn-primary" id="closeParticipantHistory">Kapat</button>
             </div>
         </div>
@@ -1265,6 +1274,27 @@
         let userId = localStorage.getItem('userId');
         let currentParticipantId = localStorage.getItem('currentParticipantId');
         let activeTab = 'main';  // Track which tab is currently active
+        
+        // Participant color palette (pastel, dark-theme friendly, colorblind-safe)
+        const PARTICIPANT_COLORS = [
+            { bg: 'rgba(74, 144, 226, 0.12)', border: '#4a90e2', name: 'Mavi' },      // Blue
+            { bg: 'rgba(40, 167, 69, 0.12)', border: '#28a745', name: 'Yeşil' },      // Green
+            { bg: 'rgba(255, 193, 7, 0.12)', border: '#ffc107', name: 'Sarı' },       // Yellow
+            { bg: 'rgba(220, 53, 69, 0.12)', border: '#dc3545', name: 'Kırmızı' },    // Red
+            { bg: 'rgba(138, 43, 226, 0.12)', border: '#8a2be2', name: 'Mor' },       // Purple
+            { bg: 'rgba(255, 152, 0, 0.12)', border: '#ff9800', name: 'Turuncu' },    // Orange
+            { bg: 'rgba(0, 188, 212, 0.12)', border: '#00bcd4', name: 'Camgöbeği' },  // Cyan
+            { bg: 'rgba(233, 30, 99, 0.12)', border: '#e91e63', name: 'Pembe' }       // Pink
+        ];
+        
+        // Get participant color based on index
+        function getParticipantColor(participantId) {
+            const participantIds = Object.keys(sessionData.participants || {})
+                .filter(id => sessionData.participants[id].isActive)
+                .sort(); // Consistent order
+            const index = participantIds.indexOf(participantId);
+            return PARTICIPANT_COLORS[index % PARTICIPANT_COLORS.length];
+        }
         
         // Generate user ID if not exists
         if (!userId) {
@@ -2161,10 +2191,6 @@
                             <div class="stat-label">En Çok İçilen (${maxCount})</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-value">${stats.length}</div>
-                            <div class="stat-label">Aktif Katılımcı</div>
-                        </div>
-                        <div class="stat-box">
                             <div class="stat-value">${durationText}</div>
                             <div class="stat-label">Oturum Süresi</div>
                         </div>
@@ -2185,8 +2211,12 @@
                 const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
                 const isSelf = sessionData.participants && Object.entries(sessionData.participants).find(([pid, p]) => p.name === stat.name && pid === currentParticipantId);
                 
+                // Find participant ID for color
+                const participantEntry = Object.entries(sessionData.participants || {}).find(([pid, p]) => p.name === stat.name);
+                const participantColor = participantEntry ? getParticipantColor(participantEntry[0]) : PARTICIPANT_COLORS[0];
+                
                 html += `
-                    <div class="participant-stat ${isSelf ? 'self' : ''}" style="border-left: 4px solid ${stat.drunknessInfo.color};">
+                    <div class="participant-stat ${isSelf ? 'self' : ''}" style="background: ${participantColor.bg}; border-left: 4px solid ${participantColor.border};">
                         <div class="stat-rank">${medal}</div>
                         <div class="stat-info">
                             <div class="stat-name">${stat.name}${isSelf ? ' (Ben)' : ''}</div>
@@ -2253,9 +2283,10 @@
                                         const timeStr = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
                                         const dateStr = date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
                                         const icon = getDrinkIcon(entry.drink);
+                                        const participantColor = getParticipantColor(entry.participantId);
                                         
                                         return `
-                                            <div style="background: #0f1419; padding: 12px; border-radius: 8px; border-left: 3px solid #4a90e2;">
+                                            <div style="background: ${participantColor.bg}; padding: 12px; border-radius: 8px; border-left: 3px solid ${participantColor.border};">
                                                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                                     <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
                                                         <span style="font-size: 24px;">${icon}</span>
@@ -2265,7 +2296,7 @@
                                                         </div>
                                                     </div>
                                                     <div style="text-align: right;">
-                                                        <div style="color: #4a90e2; font-weight: 600; font-size: 14px;">${timeStr}</div>
+                                                        <div style="color: ${participantColor.border}; font-weight: 600; font-size: 14px;">${timeStr}</div>
                                                         <div style="color: #888; font-size: 12px;">${dateStr}</div>
                                                     </div>
                                                 </div>
@@ -2405,7 +2436,7 @@
                 sessionRole.className = 'session-role admin';
             } else {
                 const participantName = sessionData.participants?.[currentParticipantId]?.name || 'Katılımcı';
-                sessionRole.textContent = participantName;
+                sessionRole.textContent = `${participantName} (${activeCount} kişi)`;
                 sessionRole.className = 'session-role';
             }
 
@@ -2792,13 +2823,15 @@
                 
                 // Safely get drink entries
                 const drinkEntries = drinks && typeof drinks === 'object' ? Object.entries(drinks) : [];
+                const participantColor = getParticipantColor(pid);
 
                 html += `
-                    <div class="participant-card ${needsAttention ? 'needs-attention' : ''}">
+                    <div class="participant-card ${needsAttention ? 'needs-attention' : ''}" style="background: ${participantColor.bg}; border-left: 3px solid ${participantColor.border};">
                         <div class="participant-header">
                             <div>
                                 <div class="participant-name ${isSelf ? 'self' : ''}">${participant.name}${isSelf ? ' (Ben)' : ''}</div>
                                 <div class="participant-info">
+                                    ${participant.gender === 'female' ? '♀️ Kadın' : '♂️ Erkek'} • ${participant.weight ? participant.weight + 'kg' : (participant.gender === 'female' ? '65kg' : '75kg')}<br>
                                     ${stats.lastDrinkTime}<br>
                                     ${stats.avgTimeInfo}
                                 </div>
@@ -3032,6 +3065,32 @@
 
             try {
                 await update(ref(database, `sessions/${currentSession}/participants/${newId}`), newParticipant);
+                
+                // Send notification to all participants (except admin)
+                const notificationId = Date.now();
+                const notification = {
+                    id: notificationId,
+                    type: 'participant_added',
+                    message: `${name} oturuma katıldı`,
+                    timestamp: Date.now(),
+                    participantName: name
+                };
+                
+                // Add notification for all users
+                const notificationUpdates = {};
+                Object.entries(sessionData.participants).forEach(([pid, participant]) => {
+                    if (participant.isActive && participant.userId) {
+                        notificationUpdates[`sessions/${currentSession}/notifications/${participant.userId}/${notificationId}`] = notification;
+                    }
+                });
+                
+                // Also add for the newly added participant if they join later
+                notificationUpdates[`sessions/${currentSession}/notifications/new_${newId}/${notificationId}`] = notification;
+                
+                if (Object.keys(notificationUpdates).length > 0) {
+                    await update(ref(database), notificationUpdates);
+                }
+                
                 addParticipantSessionModal.classList.add('hidden');
                 document.getElementById('newParticipantNameInput').value = '';
                 document.getElementById('newParticipantWeightInput').value = '';
@@ -3740,7 +3799,19 @@
                     pendingDeletions: pendingDeletions
                 });
 
-                await addNotification(`${participantName} için ${drinkType} silme isteği onaylandı`, 'success');
+                // Send notification only to the affected participant
+                const participant = sessionData.participants[participantId];
+                if (participant && participant.userId) {
+                    const notificationId = Date.now();
+                    const notification = {
+                        id: notificationId,
+                        type: 'success',
+                        message: `${drinkType} silme isteğiniz onaylandı`,
+                        timestamp: Date.now()
+                    };
+                    await update(ref(database, `sessions/${currentSession}/notifications/${participant.userId}/${notificationId}`), notification);
+                }
+
                 showToast('Silme isteği onaylandı', 'success');
                 updateApprovalCount();
                 renderApprovals();
@@ -3765,7 +3836,19 @@
                     pendingDeletions: pendingDeletions
                 });
 
-                await addNotification(`${deletion.participantName} için ${deletion.drinkType} silme isteği reddedildi`, 'warning');
+                // Send notification only to the affected participant
+                const participant = sessionData.participants[deletion.participantId];
+                if (participant && participant.userId) {
+                    const notificationId = Date.now();
+                    const notification = {
+                        id: notificationId,
+                        type: 'warning',
+                        message: `${deletion.drinkType} silme isteğiniz reddedildi`,
+                        timestamp: Date.now()
+                    };
+                    await update(ref(database, `sessions/${currentSession}/notifications/${participant.userId}/${notificationId}`), notification);
+                }
+
                 showToast('Silme isteği reddedildi', 'warning');
                 updateApprovalCount();
                 renderApprovals();
@@ -3894,6 +3977,27 @@
                     isActive: false
                 });
 
+                // Send notification to all remaining participants
+                const notificationId = Date.now();
+                const notification = {
+                    id: notificationId,
+                    type: 'participant_removed',
+                    message: `${participant.name} oturumdan çıkarıldı`,
+                    timestamp: Date.now(),
+                    participantName: participant.name
+                };
+                
+                const notificationUpdates = {};
+                Object.entries(sessionData.participants).forEach(([pid, p]) => {
+                    if (p.isActive && p.userId && pid !== participantId) {
+                        notificationUpdates[`sessions/${currentSession}/notifications/${p.userId}/${notificationId}`] = notification;
+                    }
+                });
+                
+                if (Object.keys(notificationUpdates).length > 0) {
+                    await update(ref(database), notificationUpdates);
+                }
+
                 showToast(`${participant.name} çıkarıldı`, 'warning');
             } catch (error) {
                 alert('Katılımcı çıkarılırken hata: ' + error.message);
@@ -3940,6 +4044,7 @@
             if (!participant) return;
             
             const history = sessionData.drinkHistory?.[participantId] || [];
+            const participantColor = getParticipantColor(participantId);
             
             document.getElementById('historyParticipantName').textContent = `${participant.name} için geçmiş`;
             
@@ -3957,7 +4062,7 @@
                     const icon = getDrinkIcon(entry.drink);
                     
                     html += `
-                        <div style="background: #1a1f2e; padding: 12px; border-radius: 8px; border-left: 3px solid #4a90e2;">
+                        <div style="background: ${participantColor.bg}; padding: 12px; border-radius: 8px; border-left: 3px solid ${participantColor.border};">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <span style="font-size: 24px;">${icon}</span>
@@ -3967,7 +4072,7 @@
                                     </div>
                                 </div>
                                 <div style="text-align: right;">
-                                    <div style="color: #4a90e2; font-weight: 600;">${timeStr}</div>
+                                    <div style="color: ${participantColor.border}; font-weight: 600;">${timeStr}</div>
                                     <div style="color: #888; font-size: 12px;">${dateStr}</div>
                                 </div>
                             </div>
@@ -4017,29 +4122,6 @@
         });
 
         // Copy participant history to clipboard
-        document.getElementById('copyHistory').addEventListener('click', () => {
-            const participantName = document.getElementById('historyParticipantName').textContent.replace(' için geçmiş', '');
-            const historyItems = document.querySelectorAll('#historyContent > div > div');
-            
-            let text = `${participantName} - İçki Geçmişi\n\n`;
-            historyItems.forEach(item => {
-                const drinkName = item.querySelector('div > div > div:first-child')?.textContent || '';
-                const quantity = item.querySelector('div > div > div:last-child')?.textContent || '';
-                const time = item.querySelector('div:last-child > div:first-child')?.textContent || '';
-                const date = item.querySelector('div:last-child > div:last-child')?.textContent || '';
-                
-                if (drinkName) {
-                    text += `${date} ${time} - ${drinkName} - ${quantity}\n`;
-                }
-            });
-            
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('Geçmiş kopyalandı!', 'success');
-            }).catch(() => {
-                showToast('Kopyalama başarısız', 'error');
-            });
-        });
-
         // Leave session
         window.leaveSession = function() {
             if (confirm('Bu oturumdan ayrılmak istediğinize emin misiniz?')) {
