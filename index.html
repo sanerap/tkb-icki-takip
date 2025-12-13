@@ -891,6 +891,14 @@
     <div class="container">
         <h1>🍺 TKB İçki Takibi</h1>
         
+        <!-- Timing Warning Banner -->
+        <div style="background: rgba(255, 193, 7, 0.15); border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin: 15px 0; text-align: center;">
+            <div style="color: #ffc107; font-size: 14px; font-weight: 600; margin-bottom: 5px;">⏰ ÖNEMLİ UYARI</div>
+            <div style="color: #e0e0e0; font-size: 13px; line-height: 1.5;">
+                İçkileri <strong>masaya geldiğinde</strong> ekleyin,<br>sipariş verdiğinizde değil!
+            </div>
+        </div>
+        
         <!-- Connection Status -->
         <div id="connectionStatus" class="connection-status"></div>
         
@@ -1074,6 +1082,15 @@
         <div class="modal">
             <div class="modal-title">İçki Ekle</div>
             <div class="modal-message" id="addDrinkForName"></div>
+            
+            <!-- Timing Warning -->
+            <div style="background: rgba(74, 144, 226, 0.15); border: 1px solid #4a90e2; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+                <div style="color: #4a90e2; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 16px;">ℹ️</span>
+                    <span><strong>Masaya gelen</strong> içkiyi ekleyin</span>
+                </div>
+            </div>
+            
             <div class="form-group">
                 <label>İçki Türü:</label>
                 <input type="text" id="drinkTypeInput" list="drinkTypeList" placeholder="Bira, Votka, vb." autocomplete="off">
@@ -2181,6 +2198,7 @@
                     </div>
                     
                     <div class="stats-disclaimer">
+                        ⏰ <strong>Not:</strong> Zamanlamalar içkilerin masaya geldiği zamanı gösterir.<br>
                         ⚠️ Bu değerler tahminidir ve kişiden kişiye değişir. Sorumlu içki tüketimi önemlidir!
                     </div>
                 </div>
