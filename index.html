@@ -916,9 +916,6 @@
         <div id="sessionInfo" class="session-info hidden">
             <div class="session-code" id="sessionCodeDisplay"></div>
             <div class="session-role" id="sessionRole"></div>
-            <button class="btn-primary" onclick="window.showQRCode()" style="margin-top: 10px; padding: 8px 12px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 5px;">
-                📱 QR Paylaş
-            </button>
         </div>
 
         <!-- Tab Navigation -->
@@ -2921,9 +2918,23 @@
                         <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
                         <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Admin Kodu</button>
                     </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-primary" onclick="window.showQRCode()" style="width: 100%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            📱 QR Kod Paylaş
+                        </button>
+                    </div>
                     <div style="margin-top: 10px; display: flex; gap: 10px;">
                         <button class="btn-primary btn-danger" onclick="window.requestAdminAction('clearAll')" style="flex: 1;">Tümünü Sil</button>
                         <button class="btn-primary btn-danger" onclick="window.requestAdminAction('endSession')" style="flex: 1;">Oturumu Sonlandır</button>
+                    </div>
+                `;
+            } else {
+                // Participant controls
+                html += `
+                    <div style="margin-top: 20px;">
+                        <button class="btn-primary" onclick="window.showQRCode()" style="width: 100%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            📱 QR Kod Paylaş
+                        </button>
                     </div>
                 `;
             }
@@ -3268,7 +3279,9 @@
                         `Şimdi tekrar "${existingDrinkType}" eklemek istiyorsunuz.\n\n` +
                         `Ortalama içme aralığı: ${Math.round(threshold)} dakika\n` +
                         `Son ekleme: ${timeAgo} önce (çok kısa!)\n\n` +
-                        `Bu mükerrer bir giriş olabilir.\n` +
+                        `Bu mükerrer bir giriş olabilir.\n\n` +
+                        `İçki masaya geldi mi?\n` +
+                        `Eğer gelmediyse lütfen masaya geldikten sonra ekleyin.\n\n` +
                         `Yine de eklemek istediğinize emin misiniz?`;
                     
                     if (!confirm(confirmMessage)) {
