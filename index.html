@@ -1609,8 +1609,14 @@
         // Calculate total alcohol for a participant with time-based metabolism
         // Returns grams of alcohol currently in bloodstream
         function calculateTotalAlcohol(participantId) {
+            // Use drinkHistory for time-based metabolism calculation
             const history = sessionData.drinkHistory?.[participantId] || [];
-            if (history.length === 0) return 0;
+            
+            // But first check if drinks exist - if not, return 0 immediately
+            const currentDrinks = sessionData.drinks?.[participantId] || {};
+            const hasDrinks = Object.keys(currentDrinks).length > 0;
+            
+            if (!hasDrinks || history.length === 0) return 0;
             
             const now = Date.now();
             let totalAlcohol = 0;
@@ -2482,8 +2488,11 @@
                                             return {
                                                 text: `${label}: ${value} (${percentage}%)`,
                                                 fillStyle: data.datasets[0].backgroundColor[i],
+                                                strokeStyle: '#ffffff',
+                                                lineWidth: 2,
                                                 hidden: false,
-                                                index: i
+                                                index: i,
+                                                fontColor: '#ffffff'
                                             };
                                         });
                                     }
