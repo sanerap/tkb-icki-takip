@@ -913,7 +913,10 @@
         </div>
         
         <!-- Connection Status -->
-        <div id="connectionStatus" class="connection-status"></div>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <div id="connectionStatus" class="connection-status"></div>
+            <div id="authStatus" class="connection-status" style="background: rgba(255, 193, 7, 0.2); color: #ffc107;">🔐 Auth...</div>
+        </div>
         
         <!-- Session Info (moved to bottom) -->
         <div id="sessionInfo" class="session-info hidden" style="display: none;">
@@ -1264,8 +1267,15 @@
         let currentParticipantId = localStorage.getItem('currentParticipantId');
         let activeTab = 'main';  // Track which tab is currently active
         
+        // Auth status display
+        const authStatusEl = document.getElementById('authStatus');
+        
         // Sign in anonymously for security (non-blocking)
         if (!userId) {
+            authStatusEl.textContent = '🔐 Giriş yapılıyor...';
+            authStatusEl.style.background = 'rgba(255, 193, 7, 0.2)';
+            authStatusEl.style.color = '#ffc107';
+            
             // Generate temporary ID immediately
             userId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
             localStorage.setItem('userId', userId);
@@ -1275,9 +1285,16 @@
                 // Update with real Firebase UID
                 userId = userCredential.user.uid;
                 localStorage.setItem('userId', userId);
-                console.log('Signed in with UID:', userId);
+                console.log('✅ Signed in with UID:', userId);
+                
+                authStatusEl.textContent = '🔐 Giriş Yapıldı';
+                authStatusEl.style.background = 'rgba(40, 167, 69, 0.2)';
+                authStatusEl.style.color = '#28a745';
             }).catch((error) => {
-                console.error('Auth error:', error);
+                console.error('❌ Auth error:', error);
+                authStatusEl.textContent = '🔐 Auth Hatası';
+                authStatusEl.style.background = 'rgba(220, 53, 69, 0.2)';
+                authStatusEl.style.color = '#dc3545';
                 // Keep the temporary ID
             });
         } else {
@@ -1287,13 +1304,30 @@
                     // Session valid
                     userId = user.uid;
                     localStorage.setItem('userId', userId);
+                    console.log('✅ Auth restored:', userId);
+                    
+                    authStatusEl.textContent = '🔐 Giriş Yapıldı';
+                    authStatusEl.style.background = 'rgba(40, 167, 69, 0.2)';
+                    authStatusEl.style.color = '#28a745';
                 } else {
+                    authStatusEl.textContent = '🔐 Yeniden giriş...';
+                    authStatusEl.style.background = 'rgba(255, 193, 7, 0.2)';
+                    authStatusEl.style.color = '#ffc107';
+                    
                     // Session expired, sign in again
                     signInAnonymously(auth).then((userCredential) => {
                         userId = userCredential.user.uid;
                         localStorage.setItem('userId', userId);
+                        console.log('✅ Re-authenticated:', userId);
+                        
+                        authStatusEl.textContent = '🔐 Giriş Yapıldı';
+                        authStatusEl.style.background = 'rgba(40, 167, 69, 0.2)';
+                        authStatusEl.style.color = '#28a745';
                     }).catch(error => {
-                        console.error('Re-auth error:', error);
+                        console.error('❌ Re-auth error:', error);
+                        authStatusEl.textContent = '🔐 Auth Hatası';
+                        authStatusEl.style.background = 'rgba(220, 53, 69, 0.2)';
+                        authStatusEl.style.color = '#dc3545';
                     });
                 }
             });
