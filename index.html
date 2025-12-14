@@ -2501,21 +2501,43 @@
             document.getElementById('participantNameInput').focus();
         });
 
-        // Auto-detect gender from name
+        // Auto-detect gender from name (only if user hasn't manually selected)
+        let userHasSelectedGender = false;
+        
+        document.querySelectorAll('input[name="participantGender"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                userHasSelectedGender = true;
+            });
+        });
+        
         document.getElementById('participantNameInput').addEventListener('input', (e) => {
             const name = e.target.value.trim();
-            const detectedGender = detectGenderFromName(name);
-            if (detectedGender) {
-                // Set radio button
-                const radioButton = document.querySelector(`input[name="participantGender"][value="${detectedGender}"]`);
-                if (radioButton) radioButton.checked = true;
+            if (!userHasSelectedGender && name) {
+                const detectedGender = detectGenderFromName(name);
+                if (detectedGender) {
+                    const radioButton = document.querySelector(`input[name="participantGender"][value="${detectedGender}"]`);
+                    if (radioButton) radioButton.checked = true;
+                }
             }
         });
 
         // Add Participant to temp list
-        document.getElementById('addParticipantBtn').addEventListener('click', addTempParticipant);
+        document.getElementById('addParticipantBtn').addEventListener('click', () => {
+            addTempParticipant();
+            userHasSelectedGender = false; // Reset for next participant
+        });
         document.getElementById('participantNameInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addTempParticipant();
+            if (e.key === 'Enter') {
+                addTempParticipant();
+                userHasSelectedGender = false; // Reset for next participant
+            }
+        });
+        
+        document.getElementById('participantWeightInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTempParticipant();
+                userHasSelectedGender = false; // Reset for next participant
+            }
         });
 
         function addTempParticipant() {
