@@ -389,26 +389,50 @@
         .icon-btn {
             width: 100%;
             aspect-ratio: 1;
-            font-size: 28px;
             background: #1a2332;
             border: 2px solid #2a2a3e;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 4px;
+            padding: 8px 4px;
+        }
+        
+        .icon-emoji {
+            font-size: 28px;
+            line-height: 1;
+        }
+        
+        .icon-label {
+            font-size: 10px;
+            color: #b0b0b0;
+            text-align: center;
+            line-height: 1.1;
+            font-weight: 500;
         }
 
         .icon-btn:hover {
             background: #2a2a3e;
-            transform: scale(1.1);
+            transform: scale(1.05);
+        }
+        
+        .icon-btn:hover .icon-label {
+            color: #e0e0e0;
         }
 
         .icon-btn.selected {
             background: #4a90e2;
             border-color: #4a90e2;
-            transform: scale(1.15);
+            transform: scale(1.1);
+        }
+        
+        .icon-btn.selected .icon-label {
+            color: #ffffff;
+            font-weight: 600;
         }
 
         .modal-buttons {
@@ -1112,16 +1136,46 @@
             <div class="form-group">
                 <label>İkon Seç:</label>
                 <div class="icon-picker" id="iconPicker">
-                    <button type="button" class="icon-btn" data-icon="🍺" title="Bira">🍺</button>
-                    <button type="button" class="icon-btn" data-icon="🍷" title="Şarap">🍷</button>
-                    <button type="button" class="icon-btn" data-icon="🍸" title="Kokteyl">🍸</button>
-                    <button type="button" class="icon-btn" data-icon="🥃" title="Viski">🥃</button>
-                    <button type="button" class="icon-btn" data-icon="🍹" title="Gin/Vodka">🍹</button>
-                    <button type="button" class="icon-btn" data-icon="🍾" title="Şampanya">🍾</button>
-                    <button type="button" class="icon-btn" data-icon="🥂" title="Kadeh">🥂</button>
-                    <button type="button" class="icon-btn" data-icon="🍶" title="Sake">🍶</button>
-                    <button type="button" class="icon-btn" data-icon="🥛" title="Rakı">🥛</button>
-                    <button type="button" class="icon-btn" data-icon="🧉" title="Martini">🧉</button>
+                    <button type="button" class="icon-btn" data-icon="🍺" title="Bira">
+                        <div class="icon-emoji">🍺</div>
+                        <div class="icon-label">Bira</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🍷" title="Şarap">
+                        <div class="icon-emoji">🍷</div>
+                        <div class="icon-label">Şarap</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🍸" title="Kokteyl">
+                        <div class="icon-emoji">🍸</div>
+                        <div class="icon-label">Kokteyl</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🥃" title="Viski">
+                        <div class="icon-emoji">🥃</div>
+                        <div class="icon-label">Viski</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🍹" title="Gin/Vodka">
+                        <div class="icon-emoji">🍹</div>
+                        <div class="icon-label">Vodka</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🍾" title="Şampanya">
+                        <div class="icon-emoji">🍾</div>
+                        <div class="icon-label">Şampanya</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🥂" title="Kadeh">
+                        <div class="icon-emoji">🥂</div>
+                        <div class="icon-label">Kadeh</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🥛" title="Rakı">
+                        <div class="icon-emoji">🥛</div>
+                        <div class="icon-label">Rakı</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🧉" title="Martini">
+                        <div class="icon-emoji">🧉</div>
+                        <div class="icon-label">Martini</div>
+                    </button>
+                    <button type="button" class="icon-btn" data-icon="🥤" title="Diğer">
+                        <div class="icon-emoji">🥤</div>
+                        <div class="icon-label">Diğer</div>
+                    </button>
                 </div>
                 <input type="hidden" id="selectedIcon" value="🍹">
             </div>
@@ -2241,10 +2295,6 @@
             
             let html = `
                 <div class="stats-container">
-                    <div class="stats-header">
-                        <h2 style="color: #e0e0e0; margin: 0;">📊 İstatistikler</h2>
-                    </div>
-                    
                     <div class="stats-summary">
                         <div class="stat-box">
                             <div class="stat-value">${totalDrinks}</div>
@@ -2423,7 +2473,7 @@
                             legend: {
                                 position: 'bottom',
                                 labels: {
-                                    color: '#e0e0e0',
+                                    color: '#ffffff',
                                     padding: 15,
                                     font: {
                                         size: 13
