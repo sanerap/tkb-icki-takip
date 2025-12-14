@@ -1256,27 +1256,43 @@
         const database = getDatabase(app);
         const auth = getAuth(app);
         
-        // Sign in anonymously for security
+        // Session state
+        let currentSession = localStorage.getItem('currentSession');
+        let isAdmin = localStorage.getItem('isAdmin') === 'true';
+        let adminCode = localStorage.getItem('adminCode');
         let userId = localStorage.getItem('userId');
+        let currentParticipantId = localStorage.getItem('currentParticipantId');
+        let activeTab = 'main';  // Track which tab is currently active
         
+        // Sign in anonymously for security (non-blocking)
         if (!userId) {
-            // First time - sign in anonymously
+            // Generate temporary ID immediately
+            userId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            localStorage.setItem('userId', userId);
+            
+            // Then authenticate in background
             signInAnonymously(auth).then((userCredential) => {
+                // Update with real Firebase UID
                 userId = userCredential.user.uid;
                 localStorage.setItem('userId', userId);
                 console.log('Signed in with UID:', userId);
             }).catch((error) => {
                 console.error('Auth error:', error);
-                // Fallback to old method
-                userId = 'user_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('userId', userId);
+                // Keep the temporary ID
             });
         } else {
-            // Restore session
+            // Try to restore session
             onAuthStateChanged(auth, (user) => {
-                if (!user) {
+                if (user) {
+                    // Session valid
+                    userId = user.uid;
+                    localStorage.setItem('userId', userId);
+                } else {
                     // Session expired, sign in again
-                    signInAnonymously(auth).catch(error => {
+                    signInAnonymously(auth).then((userCredential) => {
+                        userId = userCredential.user.uid;
+                        localStorage.setItem('userId', userId);
+                    }).catch(error => {
                         console.error('Re-auth error:', error);
                     });
                 }
@@ -1295,14 +1311,6 @@
                 connectionStatus.className = 'connection-status offline';
             }
         });
-
-        // Session state
-        let currentSession = localStorage.getItem('currentSession');
-        let isAdmin = localStorage.getItem('isAdmin') === 'true';
-        let adminCode = localStorage.getItem('adminCode');
-        let userId = localStorage.getItem('userId');
-        let currentParticipantId = localStorage.getItem('currentParticipantId');
-        let activeTab = 'main';  // Track which tab is currently active
         
         // Participant color palette (pastel, dark-theme friendly, colorblind-safe)
         const PARTICIPANT_COLORS = [
