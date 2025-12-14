@@ -1971,67 +1971,10 @@
             }
         };
 
-        // Generate welcome notifications for new participants
+        // Generate welcome notifications for new participants (DISABLED)
         async function generateWelcomeNotifications() {
-            try {
-                // Check if user has joined this session before
-                const hasJoinedBefore = localStorage.getItem(`joined_${currentSession}_${userId}`);
-                
-                if (hasJoinedBefore) {
-                    // User has been here before, skip welcome notifications
-                    return;
-                }
-                
-                // Mark that user has joined this session
-                localStorage.setItem(`joined_${currentSession}_${userId}`, 'true');
-                
-                const sessionRef = ref(database, `sessions/${currentSession}`);
-                const snapshot = await get(sessionRef);
-                const data = snapshot.val();
-                
-                const participants = data.participants || {};
-                const drinks = data.drinks || {};
-                const notifications = { ...(data.notifications || {}) };
-                
-                if (!notifications[userId]) {
-                    notifications[userId] = [];
-                }
-                
-                // Add welcome message
-                const baseId = Date.now();
-                let notifIndex = 0;
-                
-                notifications[userId].push({
-                    id: baseId + notifIndex++,
-                    message: '🎉 Oturuma hoş geldiniz! Mevcut durum:',
-                    type: 'info',
-                    timestamp: Date.now()
-                });
-                
-                // Add notifications for each participant's drinks
-                Object.entries(participants).forEach(([pid, participant]) => {
-                    if (!participant.isActive) return;
-                    
-                    const participantDrinks = drinks[pid];
-                    if (participantDrinks && Object.keys(participantDrinks).length > 0) {
-                        Object.entries(participantDrinks).forEach(([drinkType, quantity]) => {
-                            notifications[userId].push({
-                                id: baseId + notifIndex++,
-                                message: `${participant.name}: ${quantity} ${drinkType}`,
-                                type: 'info',
-                                timestamp: Date.now()
-                            });
-                        });
-                    }
-                });
-                
-                // Save notifications
-                await update(sessionRef, {
-                    notifications: notifications
-                });
-            } catch (error) {
-                console.error('Failed to generate welcome notifications:', error);
-            }
+            // Disabled - no welcome notifications needed
+            return;
         }
 
         // Get time ago string
@@ -3224,7 +3167,7 @@
         });
 
         // Open Add Drink Modal
-        window.openAddDrinkModal = function(participantId) {
+        window.openAddDrinkModal = async function(participantId) {
             if (!isAdmin && participantId !== currentParticipantId) return;
             
             const participant = sessionData.participants[participantId];
@@ -3242,12 +3185,52 @@
             const drinkTypes = sessionData.drinkTypes || [];
             datalist.innerHTML = drinkTypes.map(type => `<option value="${type}">`).join('');
             
-            document.getElementById('drinkTypeInput').value = '';
-            document.getElementById('drinkQuantityInput').value = '1';
-            document.getElementById('selectedIcon').value = '🍹';
+            // Check for favorite drink
+            let favoriteDrink = null;
+            let favoriteIcon = '🍹';
             
-            // Reset icon selection
-            document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('selected'));
+            try {
+                const userFavRef = ref(database, `userFavorites/${participant.name.toLowerCase()}`);
+                const favSnapshot = await get(userFavRef);
+                const favData = favSnapshot.val();
+                
+                if (favData && favData.drinks) {
+                    // Find most consumed drink
+                    const drinks = favData.drinks;
+                    const sortedDrinks = Object.entries(drinks).sort((a, b) => b[1] - a[1]);
+                    
+                    if (sortedDrinks.length > 0) {
+                        favoriteDrink = sortedDrinks[0][0];
+                        favoriteIcon = getDrinkIcon(favoriteDrink);
+                    }
+                }
+            } catch (error) {
+                console.log('Could not fetch favorite drink:', error);
+            }
+            
+            // Auto-fill favorite drink if found
+            if (favoriteDrink) {
+                document.getElementById('drinkTypeInput').value = favoriteDrink;
+                document.getElementById('selectedIcon').value = favoriteIcon;
+                
+                // Select icon
+                document.querySelectorAll('.icon-btn').forEach(btn => {
+                    if (btn.getAttribute('data-icon') === favoriteIcon) {
+                        btn.classList.add('selected');
+                    } else {
+                        btn.classList.remove('selected');
+                    }
+                });
+            } else {
+                document.getElementById('drinkTypeInput').value = '';
+                document.getElementById('drinkQuantityInput').value = '1';
+                document.getElementById('selectedIcon').value = '🍹';
+                
+                // Reset icon selection
+                document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('selected'));
+            }
+            
+            document.getElementById('drinkQuantityInput').value = '1';
             
             pendingAction = { type: 'addDrink', participantId: participantId };
             addDrinkModal.classList.remove('hidden');
@@ -3916,16 +3899,91 @@
                     alert('Veri silinirken hata: ' + error.message);
                 }
             } else if (pendingAdminAction === 'endSession') {
-                if (!confirm('Bu oturumu herkes için sonlandıracak. Emin misiniz?')) {
-                    pendingAdminAction = null;
-                    return;
+                const saveHistory = confirm('Oturumu sonlandırmadan önce:\n\nBu oturumu geçmişe kaydetmek ister misiniz?\n\n• EVET: Favori içki hesaplamasında kullanılacak\n• HAYIR: Tamamen silinecek (test için)');
+                
+                if (saveHistory) {
+                    // Save session to history before deleting
+                    try {
+                        const sessionRef = ref(database, `sessions/${currentSession}`);
+                        const snapshot = await get(sessionRef);
+                        const sessionData = snapshot.val();
+                        
+                        if (sessionData) {
+                            // Calculate session summary
+                            const participants = sessionData.participants || {};
+                            const drinks = sessionData.drinks || {};
+                            const drinkHistory = sessionData.drinkHistory || {};
+                            
+                            const sessionSummary = {
+                                sessionCode: currentSession,
+                                endedAt: Date.now(),
+                                createdAt: sessionData.createdAt,
+                                participants: {},
+                                totalDrinks: {}
+                            };
+                            
+                            // Save each participant's drink consumption
+                            Object.entries(participants).forEach(([pid, participant]) => {
+                                if (!participant.isActive) return;
+                                
+                                const participantDrinks = drinks[pid] || {};
+                                const participantHistory = drinkHistory[pid] || [];
+                                
+                                sessionSummary.participants[participant.name] = {
+                                    gender: participant.gender,
+                                    weight: participant.weight,
+                                    drinks: participantDrinks,
+                                    drinkCount: Object.values(participantDrinks).reduce((sum, qty) => sum + qty, 0),
+                                    drinkHistory: participantHistory
+                                };
+                                
+                                // Aggregate for favorite calculation
+                                Object.entries(participantDrinks).forEach(([drinkType, qty]) => {
+                                    if (!sessionSummary.totalDrinks[drinkType]) {
+                                        sessionSummary.totalDrinks[drinkType] = 0;
+                                    }
+                                    sessionSummary.totalDrinks[drinkType] += qty;
+                                });
+                            });
+                            
+                            // Save to history
+                            const historyId = `hist_${Date.now()}`;
+                            await set(ref(database, `sessionHistory/${historyId}`), sessionSummary);
+                            
+                            // Update user favorites for each participant
+                            for (const [name, data] of Object.entries(sessionSummary.participants)) {
+                                const userFavRef = ref(database, `userFavorites/${name.toLowerCase()}`);
+                                const favSnapshot = await get(userFavRef);
+                                const currentFav = favSnapshot.val() || { drinks: {} };
+                                
+                                // Add this session's drinks to their totals
+                                Object.entries(data.drinks).forEach(([drinkType, qty]) => {
+                                    if (!currentFav.drinks[drinkType]) {
+                                        currentFav.drinks[drinkType] = 0;
+                                    }
+                                    currentFav.drinks[drinkType] += qty;
+                                });
+                                
+                                currentFav.lastSession = Date.now();
+                                await set(userFavRef, currentFav);
+                            }
+                            
+                            showToast('Oturum geçmişe kaydedildi', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Error saving session history:', error);
+                        showToast('Geçmiş kaydedilirken hata oluştu', 'error');
+                    }
                 }
-
-                try {
-                    await remove(ref(database, `sessions/${currentSession}`));
-                    leaveSession();
-                } catch (error) {
-                    alert('Oturum sonlandırılırken hata: ' + error.message);
+                
+                // Delete session
+                if (confirm('Oturumu şimdi sonlandırmak istediğinize emin misiniz?')) {
+                    try {
+                        await remove(ref(database, `sessions/${currentSession}`));
+                        leaveSession();
+                    } catch (error) {
+                        alert('Oturum sonlandırılırken hata: ' + error.message);
+                    }
                 }
             }
 
