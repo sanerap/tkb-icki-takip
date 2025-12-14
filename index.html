@@ -2242,8 +2242,7 @@
             let html = `
                 <div class="stats-container">
                     <div class="stats-header">
-                        <h2 style="color: #e0e0e0; margin: 0 0 10px 0;">📊 Oturum İstatistikleri</h2>
-                        <div style="color: #b0b0b0; font-size: 14px;">Tahmini Sarhoşluk Seviyeleri</div>
+                        <h2 style="color: #e0e0e0; margin: 0;">📊 İstatistikler</h2>
                     </div>
                     
                     <div class="stats-summary">
@@ -2310,7 +2309,6 @@
                     </div>
                     
                     <div class="stats-disclaimer">
-                        ⏰ <strong>Not:</strong> Zamanlamalar içkilerin masaya geldiği zamanı gösterir.<br>
                         ⚠️ Bu değerler tahminidir ve kişiden kişiye değişir. Sorumlu içki tüketimi önemlidir!
                     </div>
                     
@@ -2429,6 +2427,20 @@
                                     padding: 15,
                                     font: {
                                         size: 13
+                                    },
+                                    generateLabels: function(chart) {
+                                        const data = chart.data;
+                                        const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                        return data.labels.map((label, i) => {
+                                            const value = data.datasets[0].data[i];
+                                            const percentage = ((value / total) * 100).toFixed(1);
+                                            return {
+                                                text: `${label}: ${value} (${percentage}%)`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
                                     }
                                 }
                             },
