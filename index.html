@@ -605,9 +605,13 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            transition: all 0.3s ease-out;
+            transition: opacity 0.25s ease-out, transform 0.25s ease-out, max-height 0.3s ease-out, margin-bottom 0.3s ease-out, padding 0.3s ease-out;
             overflow: hidden;
             max-height: 200px;
+        }
+
+        .notification-item.deleting {
+            pointer-events: none;
         }
 
         .notification-item.warning {
@@ -902,10 +906,9 @@
         <h1>🍺 TKB İçki Takibi</h1>
         
         <!-- Timing Warning Banner -->
-        <div style="background: rgba(255, 193, 7, 0.15); border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin: 15px 0; text-align: center;">
-            <div style="color: #ffc107; font-size: 14px; font-weight: 600; margin-bottom: 5px;">⏰ ÖNEMLİ UYARI</div>
-            <div style="color: #e0e0e0; font-size: 13px; line-height: 1.5;">
-                İçkileri <strong>masaya geldiğinde</strong> ekleyin,<br>sipariş verdiğinizde değil!
+        <div style="background: rgba(255, 193, 7, 0.15); border: 1px solid #ffc107; border-radius: 8px; padding: 8px 12px; margin: 15px 0; text-align: center;">
+            <div style="color: #ffc107; font-size: 13px; font-weight: 600;">
+                ⏰ İçkileri <strong>masaya geldiğinde</strong> ekleyin, sipariş verdiğinizde değil!
             </div>
         </div>
         
@@ -1857,22 +1860,30 @@
         // Delete notification with animation
         window.deleteNotification = async function(notificationId) {
             const notifElement = document.getElementById(`notif-${notificationId}`);
-            if (notifElement) {
-                // Step 1: Slide right and fade out
-                notifElement.style.opacity = '0';
-                notifElement.style.transform = 'translateX(100%)';
-                
-                // Wait for slide animation
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                // Step 2: Collapse height and margin
-                notifElement.style.maxHeight = '0';
-                notifElement.style.marginBottom = '0';
-                notifElement.style.padding = '0';
-                
-                // Wait for collapse animation
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
+            if (!notifElement) return;
+            
+            // Mark as deleting to prevent multiple clicks
+            if (notifElement.classList.contains('deleting')) return;
+            notifElement.classList.add('deleting');
+            
+            // Step 1: Fade out and slide right (fast)
+            notifElement.style.opacity = '0';
+            notifElement.style.transform = 'translateX(100%)';
+            
+            // Wait for fade/slide animation
+            await new Promise(resolve => setTimeout(resolve, 250));
+            
+            // Step 2: Collapse height, margin, and padding simultaneously
+            notifElement.style.maxHeight = '0';
+            notifElement.style.marginBottom = '0';
+            notifElement.style.paddingTop = '0';
+            notifElement.style.paddingBottom = '0';
+            
+            // Wait for collapse animation
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Step 3: Remove from DOM
+            notifElement.remove();
 
             // Track deleted notifications by participantId (not userId)
             const notifications = { ...(sessionData.notifications || {}) };
@@ -1911,6 +1922,26 @@
             if (!confirm(`${userNotifications.length} bildirimin tümünü silmek istediğinize emin misiniz?`)) {
                 return;
             }
+
+            // Animate all notifications out
+            const notifElements = document.querySelectorAll('.notification-item');
+            notifElements.forEach((element, index) => {
+                setTimeout(() => {
+                    element.classList.add('deleting');
+                    element.style.opacity = '0';
+                    element.style.transform = 'translateX(100%)';
+                    
+                    setTimeout(() => {
+                        element.style.maxHeight = '0';
+                        element.style.marginBottom = '0';
+                        element.style.paddingTop = '0';
+                        element.style.paddingBottom = '0';
+                    }, 250);
+                }, index * 50); // Stagger animation by 50ms
+            });
+
+            // Wait for all animations to complete
+            await new Promise(resolve => setTimeout(resolve, 250 + (notifElements.length * 50) + 300));
 
             const notifications = { ...(sessionData.notifications || {}) };
             const deletedNotifications = { ...(sessionData.deletedNotifications || {}) };
@@ -2844,9 +2875,7 @@
                             <div>
                                 <div class="participant-name ${isSelf ? 'self' : ''}">${participant.name}${isSelf ? ' (Ben)' : ''}</div>
                                 <div class="participant-info">
-                                    ${participant.gender === 'female' ? '♀️ Kadın' : '♂️ Erkek'} • ${participant.weight ? participant.weight + 'kg' : (participant.gender === 'female' ? '65kg' : '75kg')}<br>
-                                    ${stats.lastDrinkTime}<br>
-                                    ${stats.avgTimeInfo}
+                                    ${participant.gender === 'female' ? '♀️ Kadın' : '♂️ Erkek'} • ${participant.weight ? participant.weight + 'kg' : '~' + (participant.gender === 'female' ? '65kg' : '75kg')} • ${stats.lastDrinkTime} • ${stats.avgTimeInfo}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
@@ -2918,11 +2947,16 @@
                             `;
                         })()}
                         
+                        ${canEdit ? `
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1;">+ İçki Ekle</button>
+                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; font-size: 14px; padding: 8px;">📋 Geçmiş</button>
+                        </div>
+                        ` : `
                         <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 8px;">
                             📋 İçki Geçmişi
                         </button>
-                        
-                        ${canEdit ? `<button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')">+ İçki Ekle</button>` : ''}
+                        `}
                     </div>
                 `;
             });
