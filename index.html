@@ -986,6 +986,13 @@
             <div class="participant-list" id="participantList">
                 <div class="empty-state" style="padding: 20px;">Henüz katılımcı eklenmedi</div>
             </div>
+            
+            <div class="form-group" id="adminSelfSelectGroup" style="display: none; margin-top: 15px; padding: 15px; background: rgba(220, 53, 69, 0.1); border: 1px solid #dc3545; border-radius: 8px;">
+                <label style="color: #dc3545; font-weight: 600; margin-bottom: 10px; display: block;">👑 Siz Kimsiniz?</label>
+                <select id="adminSelfSelect" style="width: 100%; padding: 12px; background: #0f1419; border: 1px solid #dc3545; border-radius: 8px; color: #e0e0e0; font-size: 16px;">
+                    <option value="">Seçiniz...</option>
+                </select>
+            </div>
 
             <div class="modal-buttons">
                 <button class="btn-cancel" id="cancelCreateSession">İptal</button>
@@ -1090,14 +1097,7 @@
     <!-- Add Drink Modal -->
     <div id="addDrinkModal" class="modal-overlay hidden">
         <div class="modal">
-            <div class="modal-message" id="addDrinkForName" style="font-size: 16px; font-weight: 600; margin-bottom: 10px;"></div>
-            
-            <!-- Timing Warning (only for admin, inline with name) -->
-            <div id="addDrinkTimingWarning" style="background: rgba(74, 144, 226, 0.15); border: 1px solid #4a90e2; border-radius: 6px; padding: 8px 10px; margin-bottom: 15px; display: none;">
-                <div style="color: #4a90e2; font-size: 12px;">
-                    <span>ℹ️ <strong>Masaya gelen</strong> içkiyi ekleyin</span>
-                </div>
-            </div>
+            <div class="modal-message" id="addDrinkForName" style="font-size: 16px; font-weight: 600; margin-bottom: 15px;"></div>
             
             <div class="form-group">
                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -2576,11 +2576,14 @@
         function updateParticipantListUI() {
             const list = document.getElementById('participantList');
             const confirmBtn = document.getElementById('confirmCreateSession');
+            const adminSelectGroup = document.getElementById('adminSelfSelectGroup');
+            const adminSelect = document.getElementById('adminSelfSelect');
             
             if (tempParticipants.length === 0) {
                 list.innerHTML = '<div class="empty-state" style="padding: 20px;">Henüz katılımcı eklenmedi</div>';
                 confirmBtn.disabled = true;
                 confirmBtn.textContent = 'Oturumu Başlat (0 kişi)';
+                adminSelectGroup.style.display = 'none';
             } else {
                 list.innerHTML = tempParticipants.map(p => {
                     const genderIcon = p.gender === 'male' ? '♂️' : '♀️';
@@ -2592,6 +2595,12 @@
                         </div>
                     `;
                 }).join('');
+                
+                // Update admin self-select dropdown
+                adminSelect.innerHTML = '<option value="">Seçiniz...</option>' + 
+                    tempParticipants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                adminSelectGroup.style.display = 'block';
+                
                 confirmBtn.disabled = false;
                 confirmBtn.textContent = `Oturumu Başlat (${tempParticipants.length} kişi)`;
             }
@@ -2611,6 +2620,13 @@
         // Confirm Create Session
         document.getElementById('confirmCreateSession').addEventListener('click', async () => {
             if (tempParticipants.length === 0) return;
+            
+            // Check if admin selected themselves
+            const adminSelfId = document.getElementById('adminSelfSelect').value;
+            if (!adminSelfId) {
+                showToast('Lütfen kendinizi seçin', 'warning');
+                return;
+            }
 
             let sessionCode;
             let attempts = 0;
@@ -2637,7 +2653,7 @@
                     name: p.name,
                     gender: p.gender,
                     weight: p.weight,
-                    userId: null,
+                    userId: p.id === adminSelfId ? userId : null, // Assign admin's userId
                     addedAt: Date.now(),
                     addedBy: 'admin',
                     isActive: true
@@ -2647,13 +2663,14 @@
             const newSessionData = {
                 adminCode: adminCodeValue,
                 adminUserId: userId,
+                adminParticipantId: adminSelfId, // Store which participant is admin
                 createdAt: Date.now(),
                 participants: participants,
                 drinks: {},
                 drinkTypes: [],
                 drinkHistory: {},
                 undoStack: [],
-                notifications: {},  // Object with userId keys
+                notifications: {},
                 pendingDeletions: {},
                 pendingAdjustments: {}
             };
@@ -2664,9 +2681,11 @@
                 currentSession = sessionCode;
                 isAdmin = true;
                 adminCode = adminCodeValue;
+                currentParticipantId = adminSelfId; // Set admin's participant ID
                 localStorage.setItem('currentSession', sessionCode);
                 localStorage.setItem('isAdmin', 'true');
                 localStorage.setItem('adminCode', adminCodeValue);
+                localStorage.setItem('currentParticipantId', adminSelfId);
 
                 createSessionModal.classList.add('hidden');
                 
@@ -2740,10 +2759,16 @@
                 const participantSelect = document.getElementById('participantSelect');
                 participantSelect.innerHTML = '<option value="">Seçin...</option>';
                 
-                // Sort participants alphabetically by name
+                // Sort participants alphabetically by name, filter out already claimed ones
                 const sortedParticipants = Object.entries(data.participants)
-                    .filter(([id, participant]) => participant.isActive)
+                    .filter(([id, participant]) => participant.isActive && !participant.userId) // Only show unclaimed
                     .sort((a, b) => a[1].name.localeCompare(b[1].name, 'tr'));
+                
+                if (sortedParticipants.length === 0) {
+                    alert('Bu oturumda katılabileceğiniz kimse kalmadı. Tüm katılımcılar zaten oturuma katıldı.');
+                    joinSessionModal.classList.remove('hidden');
+                    return;
+                }
                 
                 sortedParticipants.forEach(([id, participant]) => {
                     const genderIcon = participant.gender === 'male' ? '♂️' : participant.gender === 'female' ? '♀️' : '';
@@ -2966,11 +2991,11 @@
                         ${canEdit ? `
                         <div style="display: flex; gap: 8px; margin-top: 10px;">
                             <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; display: flex; align-items: center; justify-content: center;">+ İçki Ekle</button>
-                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; display: flex; align-items: center; justify-content: center;">📋 Geçmiş</button>
+                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; display: flex; align-items: center; justify-content: center;">Geçmiş</button>
                         </div>
                         ` : `
                         <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 10px 8px; line-height: 1.2;">
-                            📋 İçki Geçmişi
+                            İçki Geçmişi
                         </button>
                         `}
                     </div>
@@ -3205,13 +3230,11 @@
             const participant = sessionData.participants[participantId];
             if (!participant) return;
             
-            // Show "X için:" only for admin, with warning inline
+            // Show "X için:" only for admin
             if (isAdmin) {
                 document.getElementById('addDrinkForName').textContent = `${participant.name} için:`;
-                document.getElementById('addDrinkTimingWarning').style.display = 'block';
             } else {
                 document.getElementById('addDrinkForName').textContent = '';
-                document.getElementById('addDrinkTimingWarning').style.display = 'none';
             }
             
             // Update drink type datalist
