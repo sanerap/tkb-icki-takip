@@ -1238,6 +1238,7 @@
         // Import Firebase modules
         import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, update, remove, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
         // Firebase configuration
         const firebaseConfig = {
@@ -1253,6 +1254,34 @@
         // Initialize Firebase
         const app = initFirebase(firebaseConfig);
         const database = getDatabase(app);
+        const auth = getAuth(app);
+        
+        // Sign in anonymously for security
+        let userId = localStorage.getItem('userId');
+        
+        if (!userId) {
+            // First time - sign in anonymously
+            signInAnonymously(auth).then((userCredential) => {
+                userId = userCredential.user.uid;
+                localStorage.setItem('userId', userId);
+                console.log('Signed in with UID:', userId);
+            }).catch((error) => {
+                console.error('Auth error:', error);
+                // Fallback to old method
+                userId = 'user_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userId', userId);
+            });
+        } else {
+            // Restore session
+            onAuthStateChanged(auth, (user) => {
+                if (!user) {
+                    // Session expired, sign in again
+                    signInAnonymously(auth).catch(error => {
+                        console.error('Re-auth error:', error);
+                    });
+                }
+            });
+        }
 
         // Monitor connection status
         const connectionStatus = document.getElementById('connectionStatus');
@@ -1296,11 +1325,7 @@
             return PARTICIPANT_COLORS[index % PARTICIPANT_COLORS.length];
         }
         
-        // Generate user ID if not exists
-        if (!userId) {
-            userId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-            localStorage.setItem('userId', userId);
-        }
+        // userId is now handled by Firebase Auth above
 
         // Notification permission
         let notificationsEnabled = false;
