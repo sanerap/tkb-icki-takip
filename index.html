@@ -2968,11 +2968,11 @@
                         
                         ${canEdit ? `
                         <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; display: flex; align-items: center; justify-content: center;">+ İçki Ekle</button>
-                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; display: flex; align-items: center; justify-content: center;">Geçmiş</button>
+                            <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; height: 42px; min-height: 42px; display: flex; align-items: center; justify-content: center;">+ İçki Ekle</button>
+                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; height: 42px; min-height: 42px; display: flex; align-items: center; justify-content: center;">Geçmiş</button>
                         </div>
                         ` : `
-                        <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 10px 8px; line-height: 1.2;">
+                        <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 10px 8px; line-height: 1.2; height: 42px;">
                             İçki Geçmişi
                         </button>
                         `}
