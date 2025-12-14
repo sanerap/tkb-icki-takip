@@ -1005,7 +1005,7 @@
                 <strong id="newSessionCode"></strong>
             </div>
             <div class="modal-message">
-                Admin kodunuz (bunu saklayın!):
+                Yönetici kodunuz (bunu saklayın!):
             </div>
             <div class="admin-code-display">
                 <strong id="newAdminCode"></strong>
@@ -1090,35 +1090,35 @@
     <!-- Add Drink Modal -->
     <div id="addDrinkModal" class="modal-overlay hidden">
         <div class="modal">
-            <div class="modal-title">İçki Ekle</div>
-            <div class="modal-message" id="addDrinkForName"></div>
+            <div class="modal-message" id="addDrinkForName" style="font-size: 16px; font-weight: 600; margin-bottom: 10px;"></div>
             
-            <!-- Timing Warning -->
-            <div style="background: rgba(74, 144, 226, 0.15); border: 1px solid #4a90e2; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-                <div style="color: #4a90e2; font-size: 13px; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 16px;">ℹ️</span>
-                    <span><strong>Masaya gelen</strong> içkiyi ekleyin</span>
+            <!-- Timing Warning (only for admin, inline with name) -->
+            <div id="addDrinkTimingWarning" style="background: rgba(74, 144, 226, 0.15); border: 1px solid #4a90e2; border-radius: 6px; padding: 8px 10px; margin-bottom: 15px; display: none;">
+                <div style="color: #4a90e2; font-size: 12px;">
+                    <span>ℹ️ <strong>Masaya gelen</strong> içkiyi ekleyin</span>
                 </div>
             </div>
             
             <div class="form-group">
-                <label>İçki Türü:</label>
-                <input type="text" id="drinkTypeInput" list="drinkTypeList" placeholder="Bira, Votka, vb." autocomplete="off">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="margin: 0; min-width: 80px;">İçki Türü:</label>
+                    <input type="text" id="drinkTypeInput" list="drinkTypeList" placeholder="Bira, Votka, vb." autocomplete="off" style="flex: 1;">
+                </div>
                 <datalist id="drinkTypeList"></datalist>
             </div>
             <div class="form-group">
                 <label>İkon Seç:</label>
                 <div class="icon-picker" id="iconPicker">
-                    <button type="button" class="icon-btn" data-icon="🍺">🍺</button>
-                    <button type="button" class="icon-btn" data-icon="🍷">🍷</button>
-                    <button type="button" class="icon-btn" data-icon="🍸">🍸</button>
-                    <button type="button" class="icon-btn" data-icon="🥃">🥃</button>
-                    <button type="button" class="icon-btn" data-icon="🍹">🍹</button>
-                    <button type="button" class="icon-btn" data-icon="🍾">🍾</button>
-                    <button type="button" class="icon-btn" data-icon="🥂">🥂</button>
-                    <button type="button" class="icon-btn" data-icon="🍶">🍶</button>
-                    <button type="button" class="icon-btn" data-icon="🥛">🥛</button>
-                    <button type="button" class="icon-btn" data-icon="🧉">🧉</button>
+                    <button type="button" class="icon-btn" data-icon="🍺" title="Bira">🍺</button>
+                    <button type="button" class="icon-btn" data-icon="🍷" title="Şarap">🍷</button>
+                    <button type="button" class="icon-btn" data-icon="🍸" title="Kokteyl">🍸</button>
+                    <button type="button" class="icon-btn" data-icon="🥃" title="Viski">🥃</button>
+                    <button type="button" class="icon-btn" data-icon="🍹" title="Gin/Vodka">🍹</button>
+                    <button type="button" class="icon-btn" data-icon="🍾" title="Şampanya">🍾</button>
+                    <button type="button" class="icon-btn" data-icon="🥂" title="Kadeh">🥂</button>
+                    <button type="button" class="icon-btn" data-icon="🍶" title="Sake">🍶</button>
+                    <button type="button" class="icon-btn" data-icon="🥛" title="Rakı">🥛</button>
+                    <button type="button" class="icon-btn" data-icon="🧉" title="Martini">🧉</button>
                 </div>
                 <input type="hidden" id="selectedIcon" value="🍹">
             </div>
@@ -1160,8 +1160,8 @@
     <!-- Admin Code Modal -->
     <div id="adminCodeModal" class="modal-overlay hidden">
         <div class="modal">
-            <div class="modal-title">Admin Yetkisi Gerekli</div>
-            <div class="modal-message" id="adminCodeMessage">Admin kodunu girin:</div>
+            <div class="modal-title">Yönetici Yetkisi Gerekli</div>
+            <div class="modal-message" id="adminCodeMessage">Yönetici kodunu girin:</div>
             <input type="text" id="adminCodeInput" placeholder="4 haneli kod" autocomplete="off" maxlength="4" style="margin-bottom: 15px;">
             <div class="modal-buttons">
                 <button class="btn-cancel" id="cancelAdminCode">İptal</button>
@@ -1198,13 +1198,13 @@
     <!-- Show Admin Code Modal (Private) -->
     <div id="showAdminCodeModal" class="modal-overlay hidden">
         <div class="modal">
-            <div class="modal-title">🔑 Admin Kodu</div>
+            <div class="modal-title">🔑 Yönetici Kodu</div>
             <div class="modal-message" style="color: #ff9800;">
                 ⚠️ Bu kodu GİZLİ tutun! Sadece güvendiğiniz kişilerle paylaşın.
             </div>
             
             <div class="admin-code-display">
-                <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">Admin Kodu:</div>
+                <div style="margin-bottom: 10px; color: #e0e0e0; font-size: 14px;">Yönetici Kodu:</div>
                 <strong id="showAdminCodeValue" style="font-size: 32px; color: #dc3545;"></strong>
             </div>
             <div class="modal-buttons">
@@ -2688,7 +2688,7 @@
         document.getElementById('copyNewSessionInfo').addEventListener('click', () => {
             const sessionCode = document.getElementById('newSessionCode').textContent;
             const adminCodeValue = document.getElementById('newAdminCode').textContent;
-            const text = `Oturum Kodu: ${sessionCode}\nAdmin Kodu: ${adminCodeValue}`;
+            const text = `Oturum Kodu: ${sessionCode}\nYönetici Kodu: ${adminCodeValue}`;
             
             navigator.clipboard.writeText(text).then(() => {
                 showToast('Bilgiler kopyalandı!', 'success');
@@ -2965,11 +2965,11 @@
                         
                         ${canEdit ? `
                         <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; display: flex; align-items: center; justify-content: center;">+ İçki Ekle</button>
-                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; display: flex; align-items: center; justify-content: center;">📋 Geçmiş</button>
+                            <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; display: flex; align-items: center; justify-content: center;">+ İçki Ekle</button>
+                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; line-height: 1.2; display: flex; align-items: center; justify-content: center;">📋 Geçmiş</button>
                         </div>
                         ` : `
-                        <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 10px 8px;">
+                        <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 10px 8px; line-height: 1.2;">
                             📋 İçki Geçmişi
                         </button>
                         `}
@@ -2990,7 +2990,7 @@
                     </div>
                     <div class="admin-controls" style="margin-top: 10px;">
                         <button class="btn-primary btn-success" onclick="window.openAddParticipantModal()">+ Katılımcı Ekle</button>
-                        <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Admin Kodu</button>
+                        <button class="btn-primary btn-secondary" onclick="window.showAdminCode()" style="display: flex; align-items: center; gap: 5px; justify-content: center;">🔑 Yönetici Kodu</button>
                     </div>
                     <div style="margin-top: 10px;">
                         <button class="btn-primary" onclick="window.showQRCode()" style="width: 100%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 5px;">
@@ -3205,7 +3205,14 @@
             const participant = sessionData.participants[participantId];
             if (!participant) return;
             
-            document.getElementById('addDrinkForName').textContent = `${participant.name} için:`;
+            // Show "X için:" only for admin, with warning inline
+            if (isAdmin) {
+                document.getElementById('addDrinkForName').textContent = `${participant.name} için:`;
+                document.getElementById('addDrinkTimingWarning').style.display = 'block';
+            } else {
+                document.getElementById('addDrinkForName').textContent = '';
+                document.getElementById('addDrinkTimingWarning').style.display = 'none';
+            }
             
             // Update drink type datalist
             const datalist = document.getElementById('drinkTypeList');
