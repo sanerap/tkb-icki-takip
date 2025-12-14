@@ -2868,12 +2868,31 @@
                 // Safely get drink entries
                 const drinkEntries = drinks && typeof drinks === 'object' ? Object.entries(drinks) : [];
                 const participantColor = getParticipantColor(pid);
+                
+                // Calculate promil for header display
+                const alcoholGrams = calculateTotalAlcohol(pid);
+                const drunknessInfo = getDrunknessLevel(alcoholGrams, pid);
+                const promil = drunknessInfo.promille;
+                
+                // Create compact status badge for header
+                let statusBadge = '';
+                if (promil === 0) {
+                    statusBadge = '<span style="background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">😊 0.00‰</span>';
+                } else if (promil < 0.30) {
+                    statusBadge = `<span style="background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">🙂 ${promil.toFixed(2)}‰</span>`;
+                } else if (promil < 0.50) {
+                    statusBadge = `<span style="background: rgba(255, 193, 7, 0.2); color: #ffc107; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">⚠️ ${promil.toFixed(2)}‰</span>`;
+                } else if (promil < 1.00) {
+                    statusBadge = `<span style="background: rgba(255, 152, 0, 0.2); color: #ff9800; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">🚫 ${promil.toFixed(2)}‰</span>`;
+                } else {
+                    statusBadge = `<span style="background: rgba(220, 53, 69, 0.2); color: #dc3545; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">☠️ ${promil.toFixed(2)}‰</span>`;
+                }
 
                 html += `
                     <div class="participant-card ${needsAttention ? 'needs-attention' : ''}" style="background: ${participantColor.bg}; border-left: 3px solid ${participantColor.border};">
                         <div class="participant-header">
                             <div>
-                                <div class="participant-name ${isSelf ? 'self' : ''}">${participant.name}${isSelf ? ' (Ben)' : ''}</div>
+                                <div class="participant-name ${isSelf ? 'self' : ''}">${participant.name}${isSelf ? ' (Ben)' : ''}${statusBadge}</div>
                                 <div class="participant-info">
                                     ${participant.gender === 'female' ? '♀️ Kadın' : '♂️ Erkek'} • ${participant.weight ? participant.weight + 'kg' : '~' + (participant.gender === 'female' ? '65kg' : '75kg')} • ${stats.lastDrinkTime} • ${stats.avgTimeInfo}
                                 </div>
@@ -2904,56 +2923,29 @@
                         `}).join('') : '<div class="empty-state" style="padding: 10px 0; font-size: 14px;">Henüz içki eklenmedi</div>'}
                         
                         ${(() => {
-                            // Calculate promil and show status
+                            // Show legal warning if needed
                             const alcoholGrams = calculateTotalAlcohol(pid);
                             const drunknessInfo = getDrunknessLevel(alcoholGrams, pid);
                             const promil = drunknessInfo.promille;
                             
-                            // Get participant info for debugging
-                            const participant = sessionData.participants[pid];
-                            const weight = participant.weight || (participant.gender === 'female' ? 65 : 75);
-                            const genderText = participant.gender === 'female' ? 'Kadın' : 'Erkek';
-                            
-                            let badge = '';
                             let legalWarning = '';
-                            let debugInfo = '';
                             
-                            // Add debug info if promil seems wrong
-                            if (promil > 2.0 && alcoholGrams < 100) {
-                                debugInfo = `<div style="color: #ffc107; font-size: 11px; margin-top: 5px;">ℹ️ ${genderText}, ${weight}kg, ${alcoholGrams.toFixed(0)}g alkol</div>`;
+                            if (promil >= 0.50 && promil < 1.00) {
+                                legalWarning = '<div style="color: #ff9800; font-size: 12px; margin-top: 10px; padding: 8px; background: rgba(255, 152, 0, 0.1); border-radius: 6px; text-align: center; font-weight: 600;">🚫 ARAÇ KULLANMA! Yasal limit: 0.50‰</div>';
+                            } else if (promil >= 1.00) {
+                                legalWarning = '<div style="color: #dc3545; font-size: 12px; margin-top: 10px; padding: 8px; background: rgba(220, 53, 69, 0.1); border-radius: 6px; text-align: center; font-weight: 600;">🚫 ÇOK TEHLİKELİ! ARAÇ KULLANMA!</div>';
                             }
                             
-                            if (promil === 0) {
-                                badge = '<div class="promil-badge promil-safe">😊 Ayık - 0.00‰</div>';
-                            } else if (promil < 0.30) {
-                                badge = `<div class="promil-badge promil-safe">🙂 ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
-                            } else if (promil < 0.50) {
-                                badge = `<div class="promil-badge promil-caution">⚠️ ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
-                                legalWarning = '<div style="color: #ffc107; font-size: 12px; margin-top: 5px;">⚠️ Dikkat: Yasal limite yaklaşıyorsunuz</div>';
-                            } else if (promil < 1.00) {
-                                badge = `<div class="promil-badge promil-warning">🚫 ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
-                                legalWarning = '<div style="color: #ff9800; font-size: 13px; margin-top: 5px; font-weight: 600;">🚫 ARAÇ KULLANMA! Yasal limit: 0.50‰</div>';
-                            } else {
-                                badge = `<div class="promil-badge promil-danger">☠️ ${drunknessInfo.level} - ${promil.toFixed(2)}‰</div>`;
-                                legalWarning = '<div style="color: #dc3545; font-size: 13px; margin-top: 5px; font-weight: 600;">🚫 ÇOK TEHLİKELİ! ARAÇ KULLANMA!</div>';
-                            }
-                            
-                            return `
-                                <div class="participant-status">
-                                    ${badge}
-                                    ${legalWarning}
-                                    ${debugInfo}
-                                </div>
-                            `;
+                            return legalWarning;
                         })()}
                         
                         ${canEdit ? `
                         <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1;">+ İçki Ekle</button>
-                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; font-size: 14px; padding: 8px;">📋 Geçmiş</button>
+                            <button class="btn-primary btn-success add-drink-btn" onclick="window.openAddDrinkModal('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; display: flex; align-items: center; justify-content: center;">+ İçki Ekle</button>
+                            <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="flex: 1; padding: 10px 8px; font-size: 14px; display: flex; align-items: center; justify-content: center;">📋 Geçmiş</button>
                         </div>
                         ` : `
-                        <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 8px;">
+                        <button class="btn-primary btn-secondary" onclick="window.showParticipantHistory('${pid}')" style="width: 100%; margin-top: 10px; font-size: 14px; padding: 10px 8px;">
                             📋 İçki Geçmişi
                         </button>
                         `}
@@ -3300,21 +3292,65 @@
                 console.log('Last drink added by:', lastEntry.addedBy);
                 console.log('Time since last:', timeSinceLastDrink.toFixed(2), 'minutes');
                 
-                // Calculate average interval if we have multiple drinks
+                // Calculate threshold intelligently
                 let threshold = 5; // Default: 5 minutes
+                let thresholdSource = 'varsayılan';
                 
-                if (history.length >= 2) {
-                    const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+                // Step 1: Try to get average for THIS PERSON, THIS DRINK TYPE
+                const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
+                const sameDrinkHistory = sortedHistory.filter(entry => entry.drink.toLowerCase() === existingDrinkType.toLowerCase());
+                
+                if (sameDrinkHistory.length >= 2) {
                     const intervals = [];
-                    for (let i = 0; i < Math.min(sortedHistory.length - 1, 5); i++) {
-                        intervals.push((sortedHistory[i].timestamp - sortedHistory[i + 1].timestamp) / 1000 / 60);
+                    for (let i = 0; i < Math.min(sameDrinkHistory.length - 1, 5); i++) {
+                        const intervalMinutes = (sameDrinkHistory[i].timestamp - sameDrinkHistory[i + 1].timestamp) / 1000 / 60;
+                        // Only count intervals > 1 minute (ignore same-time additions)
+                        if (intervalMinutes > 1) {
+                            intervals.push(intervalMinutes);
+                        }
                     }
-                    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-                    threshold = Math.max(avgInterval * 0.5, 3); // Half of average, minimum 3 minutes
-                    console.log('Average interval:', avgInterval.toFixed(2), 'minutes');
+                    
+                    if (intervals.length > 0) {
+                        const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                        threshold = Math.max(avgInterval * 0.5, 3); // Half of average, minimum 3 minutes
+                        thresholdSource = `kişinin ${existingDrinkType} ortalaması`;
+                        console.log(`✅ Using participant's ${existingDrinkType} average:`, avgInterval.toFixed(2), 'minutes');
+                        console.log('Intervals used:', intervals);
+                    } else {
+                        console.log(`⚠️ No valid intervals for ${existingDrinkType}, trying cross-participant data...`);
+                        
+                        // Step 2: No valid data for this person + drink combo, check OTHER PARTICIPANTS
+                        const allIntervals = [];
+                        const allHistory = sessionData.drinkHistory || {};
+                        
+                        Object.entries(allHistory).forEach(([pid, pHistory]) => {
+                            if (pid === participantId) return; // Skip self
+                            
+                            const pSameDrink = pHistory.filter(e => e.drink.toLowerCase() === existingDrinkType.toLowerCase());
+                            const pSorted = [...pSameDrink].sort((a, b) => b.timestamp - a.timestamp);
+                            
+                            for (let i = 0; i < Math.min(pSorted.length - 1, 3); i++) {
+                                const intervalMinutes = (pSorted[i].timestamp - pSorted[i + 1].timestamp) / 1000 / 60;
+                                if (intervalMinutes > 1) {
+                                    allIntervals.push(intervalMinutes);
+                                }
+                            }
+                        });
+                        
+                        if (allIntervals.length > 0) {
+                            const avgInterval = allIntervals.reduce((a, b) => a + b, 0) / allIntervals.length;
+                            threshold = Math.max(avgInterval * 0.5, 3);
+                            thresholdSource = `diğer katılımcıların ${existingDrinkType} ortalaması`;
+                            console.log(`✅ Using cross-participant ${existingDrinkType} average:`, avgInterval.toFixed(2), 'minutes');
+                            console.log('Cross-participant intervals:', allIntervals);
+                        } else {
+                            console.log('⚠️ No cross-participant data, using default threshold');
+                        }
+                    }
                 }
                 
-                console.log('Threshold:', threshold.toFixed(2), 'minutes');
+                console.log('Final threshold:', threshold.toFixed(2), 'minutes');
+                console.log('Threshold source:', thresholdSource);
                 console.log('Same drink?', lastEntry.drink.toLowerCase() === existingDrinkType.toLowerCase());
                 console.log('Too fast?', timeSinceLastDrink < threshold);
                 
@@ -3346,7 +3382,7 @@
                         `${participant.name} için ${timeAgo} önce "${lastEntry.drink}" eklendi.\n` +
                         `${addedByText}\n\n` +
                         `Şimdi tekrar "${existingDrinkType}" eklemek istiyorsunuz.\n\n` +
-                        `Ortalama içme aralığı: ${Math.round(threshold)} dakika\n` +
+                        `Ortalama içme aralığı: ${Math.round(threshold)} dakika (${thresholdSource})\n` +
                         `Son ekleme: ${timeAgo} önce (çok kısa!)\n\n` +
                         `Bu mükerrer bir giriş olabilir.\n\n` +
                         `İçki masaya geldi mi?\n` +
