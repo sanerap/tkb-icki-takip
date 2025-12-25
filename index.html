@@ -2034,7 +2034,16 @@
             
             // Remove notification from active list
             if (notifications[userId]) {
-                notifications[userId] = notifications[userId].filter(n => n.id !== notificationId);
+                const userNotificationsData = notifications[userId];
+                
+                // Handle both array and object formats
+                if (Array.isArray(userNotificationsData)) {
+                    notifications[userId] = userNotificationsData.filter(n => n.id !== notificationId);
+                } else if (typeof userNotificationsData === 'object') {
+                    // Convert to array, filter, convert back to object
+                    const notifArray = Object.values(userNotificationsData).filter(n => n.id !== notificationId);
+                    notifications[userId] = notifArray.length > 0 ? notifArray : [];
+                }
             }
 
             try {
@@ -2049,7 +2058,15 @@
 
         // Clear all notifications
         window.clearAllNotifications = async function() {
-            const userNotifications = (sessionData.notifications || {})[userId] || [];
+            const userNotificationsData = (sessionData.notifications || {})[userId];
+            
+            // Handle both array and object formats
+            let userNotifications = [];
+            if (Array.isArray(userNotificationsData)) {
+                userNotifications = userNotificationsData;
+            } else if (userNotificationsData && typeof userNotificationsData === 'object') {
+                userNotifications = Object.values(userNotificationsData);
+            }
             
             if (userNotifications.length === 0) return;
             
