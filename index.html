@@ -3082,18 +3082,18 @@
                 const drunknessInfo = getDrunknessLevel(alcoholGrams, pid);
                 const promil = drunknessInfo.promille;
                 
-                // Create compact status badge for header
+                // Create compact status badge for header using drunknessInfo
                 let statusBadge = '';
                 if (promil === 0) {
-                    statusBadge = '<span style="background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">😊 0.00‰</span>';
-                } else if (promil < 0.30) {
-                    statusBadge = `<span style="background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">🙂 ${promil.toFixed(2)}‰</span>`;
+                    statusBadge = `<span style="background: rgba(40, 167, 69, 0.2); color: #28a745; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">${drunknessInfo.emoji} 0.00‰</span>`;
                 } else if (promil < 0.50) {
-                    statusBadge = `<span style="background: rgba(255, 193, 7, 0.2); color: #ffc107; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">⚠️ ${promil.toFixed(2)}‰</span>`;
+                    statusBadge = `<span style="background: rgba(74, 144, 226, 0.2); color: #4a90e2; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">${drunknessInfo.emoji} ${promil.toFixed(2)}‰</span>`;
                 } else if (promil < 1.00) {
-                    statusBadge = `<span style="background: rgba(255, 152, 0, 0.2); color: #ff9800; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">🚫 ${promil.toFixed(2)}‰</span>`;
+                    statusBadge = `<span style="background: rgba(255, 193, 7, 0.2); color: #ffc107; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">${drunknessInfo.emoji} ${promil.toFixed(2)}‰</span>`;
+                } else if (promil < 2.00) {
+                    statusBadge = `<span style="background: rgba(255, 87, 34, 0.2); color: #ff5722; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">${drunknessInfo.emoji} ${promil.toFixed(2)}‰</span>`;
                 } else {
-                    statusBadge = `<span style="background: rgba(220, 53, 69, 0.2); color: #dc3545; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">☠️ ${promil.toFixed(2)}‰</span>`;
+                    statusBadge = `<span style="background: rgba(220, 53, 69, 0.2); color: #dc3545; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px;">${drunknessInfo.emoji} ${promil.toFixed(2)}‰</span>`;
                 }
 
                 html += `
