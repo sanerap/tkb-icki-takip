@@ -1735,6 +1735,10 @@
             pendingAdjustments: {},
             drinkIcons: {}  // Custom drink type to icon mapping
         };
+        
+        // Session listener and loading state
+        let sessionListener = null; // Track listener to avoid duplicates
+        let isLoadingSession = true;
 
         // Temporary data for session creation
         let tempParticipants = [];
@@ -2907,9 +2911,6 @@
         });
 
         // Load Session
-        let sessionListener = null; // Track listener to avoid duplicates
-        let isLoadingSession = true;
-        
         function loadSession(sessionCode) {
             const sessionRef = ref(database, `sessions/${sessionCode}`);
             
