@@ -2903,35 +2903,40 @@
         });
 
         // Load Session
+        let sessionListener = null; // Track listener to avoid duplicates
+        let isLoadingSession = true;
+        
         function loadSession(sessionCode) {
             const sessionRef = ref(database, `sessions/${sessionCode}`);
             
-            // Force initial load from server (not cache)
-            get(sessionRef).then((snapshot) => {
+            // Show loading
+            isLoadingSession = true;
+            document.getElementById('mainContent').innerHTML = `
+                <div style="text-align: center; padding: 60px 20px; color: #b0b0b0;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+                    <div style="font-size: 18px;">Oturum yükleniyor...</div>
+                </div>
+            `;
+            
+            // Remove old listener if exists
+            if (sessionListener) {
+                sessionListener();
+            }
+            
+            // Listen for updates
+            sessionListener = onValue(sessionRef, (snapshot) => {
                 if (!snapshot.exists()) {
-                    showToast('Oturum bulunamadı', 'error');
+                    showToast('Oturum sonlandırıldı', 'error');
                     setTimeout(() => leaveSession(), 2000);
                     return;
                 }
                 
-                // Process initial data
+                isLoadingSession = false;
                 processSessionData(snapshot.val());
-                
-                // Then listen for real-time updates
-                onValue(sessionRef, (snapshot) => {
-                    if (!snapshot.exists()) {
-                        showToast('Oturum sonlandırıldı', 'error');
-                        setTimeout(() => leaveSession(), 2000);
-                        return;
-                    }
-                    
-                    processSessionData(snapshot.val());
-                }, (error) => {
-                    console.error('Session listen error:', error);
-                });
-            }).catch((error) => {
+            }, (error) => {
                 console.error('Session load error:', error);
-                showToast('Oturum yüklenemedi', 'error');
+                isLoadingSession = false;
+                showToast('Bağlantı hatası', 'error');
             });
         }
         
