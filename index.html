@@ -1623,11 +1623,28 @@
             // Alcohol metabolism rate: ~7-10g per hour, we use 8g/hour
             const metabolismRate = 8; // grams per hour
             
+            // Absorption time: alcohol takes time to enter bloodstream
+            // Peak BAC typically at 30-90 minutes, we use 60 min (1 hour)
+            const absorptionTimeHours = 1.0; // 1 hour to fully absorb
+            
             history.forEach(entry => {
                 const alcoholGrams = getAlcoholContent(entry.drink) * entry.quantity;
                 const hoursElapsed = (now - entry.timestamp) / 1000 / 60 / 60;
+                
+                // Calculate absorption factor (0 to 1)
+                // Linear absorption over absorptionTimeHours
+                const absorptionFactor = Math.min(1, hoursElapsed / absorptionTimeHours);
+                
+                // Absorbed alcohol = total × absorption factor
+                const absorbedAlcohol = alcoholGrams * absorptionFactor;
+                
+                // Metabolized alcohol starts AFTER absorption begins
+                // But we'll simplify: metabolism happens throughout
                 const metabolizedAlcohol = metabolismRate * hoursElapsed;
-                const remainingAlcohol = Math.max(0, alcoholGrams - metabolizedAlcohol);
+                
+                // Remaining = absorbed - metabolized
+                const remainingAlcohol = Math.max(0, absorbedAlcohol - metabolizedAlcohol);
+                
                 totalAlcohol += remainingAlcohol;
             });
             
@@ -1665,12 +1682,12 @@
         function getDrunknessLevel(alcoholGrams, participantId) {
             const promille = gramsToPromille(alcoholGrams, participantId);
             
-            if (promille === 0) return { level: 'Ayık', emoji: '😊', color: '#28a745', promille };
+            if (promille === 0) return { level: 'Ayık', emoji: '😐', color: '#28a745', promille };
             if (promille < 0.5) return { level: 'Hafif Neşeli', emoji: '🙂', color: '#4a90e2', promille };
-            if (promille < 1.0) return { level: 'Neşeli', emoji: '😄', color: '#ffc107', promille };
-            if (promille < 1.5) return { level: 'Çakırkeyif', emoji: '😜', color: '#ff9800', promille };
-            if (promille < 2.0) return { level: 'Sarhoş', emoji: '🥴', color: '#ff5722', promille };
-            return { level: 'Çok Sarhoş', emoji: '🤢', color: '#dc3545', promille };
+            if (promille < 1.0) return { level: 'Neşeli', emoji: '😊', color: '#ffc107', promille };
+            if (promille < 1.5) return { level: 'Çakırkeyif', emoji: '😁', color: '#ff9800', promille };
+            if (promille < 2.0) return { level: 'Sarhoş', emoji: '😵', color: '#ff5722', promille };
+            return { level: 'Çok Sarhoş', emoji: '🤮', color: '#dc3545', promille };
         }
 
         // Turkish names gender database (common names)
