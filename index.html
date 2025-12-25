@@ -1288,7 +1288,7 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, update, remove, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+        import { getDatabase, ref, onValue, set, update, remove, get, goOffline, goOnline } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
         // Firebase configuration
@@ -2522,6 +2522,10 @@
         }
 
         function initializeApp() {
+            // Force fresh connection on page load (clear any stale connections)
+            goOffline(database);
+            setTimeout(() => goOnline(database), 100);
+            
             // Check for join parameter in URL (QR code)
             const urlParams = new URLSearchParams(window.location.search);
             const joinSession = urlParams.get('join');
