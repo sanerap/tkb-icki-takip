@@ -2906,47 +2906,67 @@
         function loadSession(sessionCode) {
             const sessionRef = ref(database, `sessions/${sessionCode}`);
             
-            onValue(sessionRef, (snapshot) => {
+            // Force initial load from server (not cache)
+            get(sessionRef).then((snapshot) => {
                 if (!snapshot.exists()) {
-                    showToast('Oturum sonlandırıldı', 'error');
+                    showToast('Oturum bulunamadı', 'error');
                     setTimeout(() => leaveSession(), 2000);
                     return;
                 }
-
-                const data = snapshot.val();
                 
-                // Ensure all required fields exist with defaults
-                sessionData = {
-                    participants: data.participants || {},
-                    drinks: data.drinks || {},
-                    drinkTypes: data.drinkTypes || [],
-                    drinkHistory: data.drinkHistory || {},
-                    undoStack: data.undoStack || [],
-                    notifications: data.notifications || {},  // Object with userId keys
-                    pendingDeletions: data.pendingDeletions || {},
-                    pendingAdjustments: data.pendingAdjustments || {},
-                    drinkIcons: data.drinkIcons || {},
-                    adminCode: data.adminCode,
-                    adminUserId: data.adminUserId,
-                    createdAt: data.createdAt
-                };
+                // Process initial data
+                processSessionData(snapshot.val());
                 
-                showSessionInfo();
-                renderMainContent();
-                updateNotificationCount();
-                if (isAdmin) {
-                    updateApprovalCount();
-                }
-                
-                // Auto-update active tab content
-                if (activeTab === 'notifications') {
-                    renderNotifications();
-                } else if (activeTab === 'approvals') {
-                    renderApprovals();
-                } else if (activeTab === 'stats') {
-                    renderStats();
-                }
+                // Then listen for real-time updates
+                onValue(sessionRef, (snapshot) => {
+                    if (!snapshot.exists()) {
+                        showToast('Oturum sonlandırıldı', 'error');
+                        setTimeout(() => leaveSession(), 2000);
+                        return;
+                    }
+                    
+                    processSessionData(snapshot.val());
+                }, (error) => {
+                    console.error('Session listen error:', error);
+                });
+            }).catch((error) => {
+                console.error('Session load error:', error);
+                showToast('Oturum yüklenemedi', 'error');
             });
+        }
+        
+        function processSessionData(data) {
+            // Ensure all required fields exist with defaults
+            sessionData = {
+                participants: data.participants || {},
+                drinks: data.drinks || {},
+                drinkTypes: data.drinkTypes || [],
+                drinkHistory: data.drinkHistory || {},
+                undoStack: data.undoStack || [],
+                notifications: data.notifications || {},
+                pendingDeletions: data.pendingDeletions || {},
+                pendingAdjustments: data.pendingAdjustments || {},
+                drinkIcons: data.drinkIcons || {},
+                adminCode: data.adminCode,
+                adminUserId: data.adminUserId,
+                createdAt: data.createdAt
+            };
+            
+            showSessionInfo();
+            renderMainContent();
+            updateNotificationCount();
+            if (isAdmin) {
+                updateApprovalCount();
+            }
+            
+            // Auto-update active tab content
+            if (activeTab === 'notifications') {
+                renderNotifications();
+            } else if (activeTab === 'approvals') {
+                renderApprovals();
+            } else if (activeTab === 'stats') {
+                renderStats();
+            }
         }
 
         // Render Main Content
