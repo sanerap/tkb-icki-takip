@@ -1936,7 +1936,16 @@
         function renderNotifications() {
             // Get notifications for current user
             const allNotifications = sessionData.notifications || {};
-            const userNotifications = allNotifications[userId] || [];
+            const userNotificationsData = allNotifications[userId];
+            
+            // Handle both array (old format) and object (new format)
+            let userNotifications = [];
+            if (Array.isArray(userNotificationsData)) {
+                userNotifications = userNotificationsData;
+            } else if (userNotificationsData && typeof userNotificationsData === 'object') {
+                // Convert object to array
+                userNotifications = Object.values(userNotificationsData);
+            }
             
             // Get deleted notifications for current participant (not userId)
             const deletedNotifications = (sessionData.deletedNotifications || {})[currentParticipantId] || [];
@@ -2127,7 +2136,16 @@
         // Update notification count badge
         function updateNotificationCount() {
             const allNotifications = sessionData.notifications || {};
-            const userNotifications = allNotifications[userId] || [];
+            const userNotificationsData = allNotifications[userId];
+            
+            // Handle both array (old format) and object (new format)
+            let userNotifications = [];
+            if (Array.isArray(userNotificationsData)) {
+                userNotifications = userNotificationsData;
+            } else if (userNotificationsData && typeof userNotificationsData === 'object') {
+                // Convert object to array
+                userNotifications = Object.values(userNotificationsData);
+            }
             
             // Get deleted notifications for current participant (not userId)
             const deletedNotifications = (sessionData.deletedNotifications || {})[currentParticipantId] || [];
