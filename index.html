@@ -438,29 +438,6 @@
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/ui.js"></script>
-    <script src="js/app.js"></script>
-    <script type="module">
-        import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, update, remove, get, goOffline, goOnline } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-        
-        window.initFirebase = initFirebase;
-        window.getDatabase = getDatabase;
-        window.ref = ref;
-        window.onValue = onValue;
-        window.set = set;
-        window.update = update;
-        window.remove = remove;
-        window.get = get;
-        window.goOffline = goOffline;
-        window.goOnline = goOnline;
-        window.getAuth = getAuth;
-        window.signInAnonymously = signInAnonymously;
-        window.onAuthStateChanged = onAuthStateChanged;
-
-        if (window.initApplication) {
-            window.initApplication();
-        }
-    </script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
