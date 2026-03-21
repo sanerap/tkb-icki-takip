@@ -138,9 +138,15 @@ window.initApplication = function() {
     };
 
     window.leaveSession = function() {
+        if (window.isAdmin) {
+            if (!confirm('Yönetici olarak oturumdan ayrılıyorsunuz. Oturumu sonlandırmadınız, bu yüzden katılımcılar devam edebilir. Ayrılmak istediğinize emin misiniz?')) {
+                return;
+            }
+        }
         localStorage.removeItem('currentSession');
         localStorage.removeItem('currentParticipantId');
         localStorage.removeItem('isAdmin');
+        localStorage.removeItem('adminCode');
         window.location.reload();
     };
 
@@ -199,6 +205,61 @@ window.initApplication = function() {
     window.showAdminCode = function() {
         document.getElementById('showAdminCodeValue').textContent = window.adminCode;
         document.getElementById('showAdminCodeModal').classList.remove('hidden');
+    };
+
+    window.openAddParticipantModal = function() {
+        document.getElementById('addParticipantSessionModal').classList.remove('hidden');
+    };
+
+    window.openAddFoodModal = function() {
+        const list = document.getElementById('foodParticipantsCheckboxes');
+        list.innerHTML = Object.entries(window.sessionData.participants)
+            .filter(([pid, p]) => p.isActive && !p.leftAt)
+            .map(([pid, p]) => `
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" name="foodParticipant" value="${pid}" checked style="width: 18px; height: 18px;">
+                    <span style="color: white;">${p.name}</span>
+                </label>
+            `).join('');
+        document.getElementById('addFoodModal').classList.remove('hidden');
+    };
+
+    window.showSessionSummary = function() {
+        const participants = window.sessionData.participants || {};
+        const drinks = window.sessionData.drinks || {};
+        
+        // Calculate totals
+        let totalDrinks = 0;
+        const participantSummary = [];
+        
+        Object.entries(participants).forEach(([pid, p]) => {
+            if (!p.isActive) return;
+            const pDrinks = drinks[pid] || {};
+            let pTotal = 0;
+            Object.values(pDrinks).forEach(q => pTotal += q);
+            totalDrinks += pTotal;
+            
+            participantSummary.push({
+                name: p.name,
+                total: pTotal,
+                promil: window.getDrunknessLevel(window.calculateTotalAlcohol(pid), pid).promille
+            });
+        });
+        
+        // Populate Modal
+        document.getElementById('summaryStats').innerHTML = `
+            <div style="text-align: center;"><div style="font-size: 20px; font-weight: bold;">${totalDrinks}</div><div style="font-size: 10px; color: #888;">TOPLAM İÇKİ</div></div>
+            <div style="text-align: center;"><div style="font-size: 20px; font-weight: bold;">${Object.keys(participants).length}</div><div style="font-size: 10px; color: #888;">KATILIMCI</div></div>
+        `;
+        
+        document.getElementById('summaryParticipants').innerHTML = participantSummary.map(p => `
+            <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <span>${p.name}</span>
+                <span>${p.total} İçki (${p.promil.toFixed(2)}‰)</span>
+            </div>
+        `).join('');
+        
+        document.getElementById('sessionSummaryModal').classList.remove('hidden');
     };
 };
 
