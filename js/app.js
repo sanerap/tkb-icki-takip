@@ -50,12 +50,12 @@ window.initApplication = function() {
 
         // Setup Panel (Create/Join)
         document.getElementById('createSessionBtn').addEventListener('click', () => {
-            document.getElementById('setupPanel').classList.add('hidden');
-            document.getElementById('createSessionCard').classList.remove('hidden');
+            document.getElementById('sessionManagement').classList.add('hidden');
+            document.getElementById('createSessionModal').classList.remove('hidden');
         });
 
         document.getElementById('joinSessionBtn').addEventListener('click', () => {
-            document.getElementById('setupPanel').classList.add('hidden');
+            document.getElementById('sessionManagement').classList.add('hidden');
             document.getElementById('joinSessionModal').classList.remove('hidden');
         });
 
@@ -117,8 +117,8 @@ window.initApplication = function() {
         window.isLoadingSession = true;
         window.showSessionInfo();
         
-        document.getElementById('setupContent').classList.add('hidden');
-        document.getElementById('mainUI').classList.remove('hidden');
+        document.getElementById('sessionManagement').classList.add('hidden');
+        document.getElementById('tabNavigation').classList.remove('hidden');
         
         if (window.sessionListener) window.sessionListener();
         
