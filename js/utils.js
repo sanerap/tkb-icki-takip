@@ -191,3 +191,19 @@ window.getParticipantStats = function(participantId, now) {
 
     return { lastDrinkTime: lastDrinkText, avgTimeInfo: `Ort. aralık: ${avgInterval}d` };
 };
+
+window.handleAsyncButton = async function(btn, asyncFn) {
+    if (!btn || btn.disabled) return;
+    const ogText = btn.innerHTML;
+    const ogWidth = btn.offsetWidth;
+    btn.disabled = true;
+    if (ogWidth > 0) btn.style.width = ogWidth + 'px';
+    btn.innerHTML = '⏳...';
+    try {
+        await asyncFn();
+    } finally {
+        btn.innerHTML = ogText;
+        btn.disabled = false;
+        btn.style.width = '';
+    }
+};

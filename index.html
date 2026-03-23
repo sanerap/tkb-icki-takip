@@ -19,6 +19,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+    <div id="offlineIndicator" style="display: none; background: #dc3545; color: white; text-align: center; padding: 10px; font-weight: bold; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+        ⚠️ İnternet Bağlantısı Koptu - Veriler Senkronize Edilemiyor
+    </div>
     <div class="container">
         <h1>🍺 İçki Takibi</h1>
         
@@ -80,7 +83,7 @@
             
             <div class="form-group">
                 <label>Katılımcı Bilgileri:</label>
-                <input type="text" id="participantNameInput" placeholder="İsim" autocomplete="off" style="margin-bottom: 10px;">
+                <input type="text" id="participantNameInput" placeholder="İsim" autocomplete="off" maxlength="30" style="margin-bottom: 10px;">
                 
                 <div style="margin-bottom: 10px;">
                     <label style="display: block; margin-bottom: 8px; color: #b0b0b0; font-size: 14px;">Cinsiyet:</label>
@@ -152,7 +155,7 @@
         <div class="modal">
             <div class="modal-title">Oturuma Katıl</div>
             <div class="modal-message">Oturum kodunu girin:</div>
-            <input type="text" id="joinSessionCodeInput" placeholder="örn: ASLAN47" autocomplete="off" style="margin-bottom: 15px;">
+            <input type="text" id="joinSessionCodeInput" placeholder="örn: ASLAN47" autocomplete="off" maxlength="6" style="margin-bottom: 15px;">
             <div class="modal-buttons">
                 <button class="btn-cancel" id="cancelJoinSession">İptal</button>
                 <button class="btn-primary" id="confirmJoinSessionCode">Devam</button>
@@ -186,7 +189,7 @@
             <div class="modal-title">Katılımcı Ekle</div>
             <div class="form-group">
                 <label>İsim:</label>
-                <input type="text" id="newParticipantNameInput" placeholder="İsim girin" autocomplete="off">
+                <input type="text" id="newParticipantNameInput" placeholder="İsim girin" autocomplete="off" maxlength="30">
             </div>
             <div class="form-group">
                 <label style="display: block; margin-bottom: 8px;">Cinsiyet:</label>
@@ -222,7 +225,7 @@
             <div class="form-group">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <label style="margin: 0; min-width: 80px;">İçki Türü:</label>
-                    <input type="text" id="drinkTypeInput" list="drinkTypeList" placeholder="Bira, Votka, vb." autocomplete="off" style="flex: 1;">
+                    <input type="text" id="drinkTypeInput" list="drinkTypeList" placeholder="Bira, Votka, vb." autocomplete="off" maxlength="30" style="flex: 1;">
                 </div>
                 <datalist id="drinkTypeList"></datalist>
             </div>
@@ -262,7 +265,7 @@
             </div>
             <div class="form-group">
                 <label>Miktar:</label>
-                <input type="number" id="drinkQuantityInput" value="1" min="1">
+                <input type="number" id="drinkQuantityInput" value="1" min="1" max="20">
             </div>
             <div class="modal-buttons">
                 <button class="btn-cancel" id="cancelAddDrink">İptal</button>
@@ -343,12 +346,12 @@
             
             <div class="form-group" style="margin-top: 15px;">
                 <label style="color: #b0b0b0; font-size: 14px; margin-bottom: 5px; display: block;">Yiyecek Adı (Örn: Pizza, Çerez, vb.)</label>
-                <input type="text" id="foodNameInput" class="form-control" placeholder="Yiyecek adı..." style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid #4a90e2; border-radius: 6px; color: white;">
+                <input type="text" id="foodNameInput" class="form-control" placeholder="Yiyecek adı..." maxlength="30" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid #4a90e2; border-radius: 6px; color: white;">
             </div>
             
             <div class="form-group" style="margin-top: 15px;">
                 <label style="color: #b0b0b0; font-size: 14px; margin-bottom: 5px; display: block;">Adet / Porsiyon (Ortak bölünecek miktar)</label>
-                <input type="number" id="foodQuantityInput" class="form-control" value="1" min="0.5" step="0.5" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid #4a90e2; border-radius: 6px; color: white;">
+                <input type="number" id="foodQuantityInput" class="form-control" value="1" min="0.5" max="50" step="0.5" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid #4a90e2; border-radius: 6px; color: white;">
             </div>
 
             <div class="form-group" style="margin-top: 15px;">

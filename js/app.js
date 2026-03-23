@@ -6,6 +6,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebas
 import { getDatabase, ref, onValue, set, update, remove, get, push } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
+// Global Error Handlers to prevent silent crashes
+window.addEventListener('error', (event) => {
+    console.error('Kritik Hata (Global):', event.error);
+    if(window.showToast) window.showToast(`Sistem Hatası: ${event.message}`, 'error');
+});
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Yakalanmayan Asenkron Hata:', event.reason);
+    if(window.showToast) window.showToast(`Bağlantı/İşlem Hatası: ${event.reason?.message || 'Bilinmiyor'}`, 'error');
+});
+
 // Global Firebase Exports
 window.firebaseApp = initializeApp(window.firebaseConfig);
 window.database = getDatabase(window.firebaseApp);
@@ -16,6 +26,17 @@ window.initApplication = function() {
     const auth = window.auth;
 
     signInAnonymously(auth).catch(err => console.error('Auth error:', err));
+    
+    // Connection Monitoring
+    const connectedRef = ref(db, ".info/connected");
+    onValue(connectedRef, (snap) => {
+        const isConnected = snap.val();
+        const indicator = document.getElementById('offlineIndicator');
+        if (indicator) {
+            indicator.style.display = isConnected === false ? 'block' : 'none';
+        }
+    });
+
     onAuthStateChanged(auth, (user) => {
         if (user) {
             window.userId = user.uid;
@@ -75,6 +96,8 @@ window.initApplication = function() {
             const weight = parseInt(document.getElementById('participantWeightInput').value) || null;
             
             if (!name) return window.showToast('Lütfen isim girin!', 'warning');
+            if (name.length > 30) return window.showToast('İsim çok uzun!', 'warning');
+            if (weight && (weight < 30 || weight > 250)) return window.showToast('Geçerli bir kilo girin!', 'warning');
             
             window.tempParticipants = window.tempParticipants || [];
             window.tempParticipants.push({
@@ -91,7 +114,7 @@ window.initApplication = function() {
             document.getElementById('sessionManagement').classList.add('hidden');
             document.getElementById('joinSessionModal').classList.remove('hidden');
         });
-        document.getElementById('confirmCreateSession')?.addEventListener('click', () => window.createNewSession());
+        document.getElementById('confirmCreateSession')?.addEventListener('click', function() { window.handleAsyncButton(this, window.createNewSession); });
 
         // Modals
         const modalClosers = {
@@ -106,17 +129,35 @@ window.initApplication = function() {
             document.getElementById(btnId)?.addEventListener('click', () => document.getElementById(modalId).classList.add('hidden'));
         });
 
-        document.getElementById('confirmJoinSessionCode')?.addEventListener('click', () => {
-            const code = document.getElementById('joinSessionCodeInput').value.trim().toUpperCase();
-            if (code) window.joinSessionStep1(code);
+        document.getElementById('confirmJoinSessionCode')?.addEventListener('click', function() {
+            window.handleAsyncButton(this, async () => {
+                const code = document.getElementById('joinSessionCodeInput').value.trim().toUpperCase();
+                if (code) await window.joinSessionStep1(code);
+            });
         });
-        document.getElementById('confirmSelectParticipant')?.addEventListener('click', () => {
-            const pid = document.getElementById('participantSelect').value;
-            if (pid) window.joinSessionStep2(pid);
+        document.getElementById('confirmSelectParticipant')?.addEventListener('click', function() {
+            window.handleAsyncButton(this, async () => {
+                const pid = document.getElementById('participantSelect').value;
+                if (pid) await window.joinSessionStep2(pid);
+            });
         });
-        document.getElementById('confirmAddDrink')?.addEventListener('click', () => window.addDrink());
-        document.getElementById('confirmAddParticipantSession')?.addEventListener('click', () => window.addParticipant());
-        document.getElementById('confirmAddFood')?.addEventListener('click', () => window.addFood());
+        document.getElementById('confirmAddDrink')?.addEventListener('click', function() { window.handleAsyncButton(this, window.addDrink); });
+        document.getElementById('confirmAddParticipantSession')?.addEventListener('click', function() { window.handleAsyncButton(this, window.addParticipant); });
+        document.getElementById('confirmAddFood')?.addEventListener('click', function() { window.handleAsyncButton(this, window.addFood); });
+
+        // Global Enter key support for modals
+        document.querySelectorAll('.modal input').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const modal = input.closest('.modal');
+                    if (modal) {
+                        const btn = modal.querySelector('.modal-buttons .btn-primary:not(.btn-cancel)');
+                        if (btn && !btn.disabled) btn.click();
+                    }
+                }
+            });
+        });
     }
 
     // Session Creation State
@@ -230,9 +271,12 @@ window.initApplication = function() {
     window.joinSessionStep2 = async (pid) => {
         const code = window.tempJoiningSession;
         if (pid === 'NEW') {
-            const name = prompt('İsim:'); if (!name) return;
+            const name = prompt('İsim (Maksimum 30 karakter):'); 
+            if (!name) return;
+            const cleanName = name.trim();
+            if (cleanName.length === 0 || cleanName.length > 30) return window.showToast('Geçersiz veya çok uzun isim!', 'error');
             pid = window.generateParticipantId();
-            await update(ref(db), { [`sessions/${code}/participants/${pid}`]: { name, gender: window.detectGenderFromName(name) || 'male', userId: window.userId, isActive: true } });
+            await update(ref(db), { [`sessions/${code}/participants/${pid}`]: { name: cleanName, gender: window.detectGenderFromName(cleanName) || 'male', userId: window.userId, isActive: true } });
         } else {
             await update(ref(db), { [`sessions/${code}/participants/${pid}/userId`]: window.userId });
         }
@@ -254,7 +298,7 @@ window.initApplication = function() {
         
         onValue(ref(db, `sessions/${code}`), (snap) => {
             window.isLoadingSession = false;
-            if (!snap.exists()) { window.showToast('Oturum sonlandırıldı', 'error'); window.leaveSession(); return; }
+            if (!snap.exists()) { window.showToast('Oturum sonlandırıldı veya silindi', 'warning'); window.leaveSession(true); return; }
             window.sessionData = snap.val();
             window.renderMainContent();
             window.updateNotificationCount();
@@ -269,8 +313,8 @@ window.initApplication = function() {
         });
     };
 
-    window.leaveSession = () => {
-        if (window.isAdmin && !confirm('Yönetici olarak ayrılıyorsunuz. Emin misiniz?')) return;
+    window.leaveSession = (force = false) => {
+        if (!force && window.isAdmin && !confirm('Yönetici olarak ayrılıyorsunuz. Emin misiniz?')) return;
         localStorage.clear(); window.location.reload();
     };
 
@@ -278,7 +322,9 @@ window.initApplication = function() {
         const type = document.getElementById('drinkTypeInput').value;
         const qty = parseInt(document.getElementById('drinkQuantityInput').value);
         const pid = window.activeDrinkParticipantId;
-        if (!type || !qty) return;
+        if (!type || !qty) return window.showToast('Geçersiz içki veya miktar!', 'warning');
+        if (type.length > 30) return window.showToast('İçki adı çok uzun!', 'warning');
+        if (qty <= 0 || qty > 20) return window.showToast('Miktar 1 ile 20 arasında olmalı!', 'warning');
         
         const updates = {};
         const currentQty = (window.sessionData.drinks?.[pid]?.[type]) || 0;
@@ -291,9 +337,12 @@ window.initApplication = function() {
 
     window.addParticipant = async () => {
         const name = document.getElementById('newParticipantNameInput').value.trim();
-        if (!name) return;
+        const weight = parseInt(document.getElementById('newParticipantWeightInput').value) || null;
+        if (!name) return window.showToast('Lütfen isim girin!', 'warning');
+        if (name.length > 30) return window.showToast('İsim çok uzun!', 'warning');
+        if (weight && (weight < 30 || weight > 250)) return window.showToast('Geçerli bir kilo girin!', 'warning');
         const pid = window.generateParticipantId();
-        await update(ref(db), { [`sessions/${window.currentSession}/participants/${pid}`]: { name, gender: document.querySelector('input[name="newParticipantGender"]:checked').value, weight: parseInt(document.getElementById('newParticipantWeightInput').value) || null, isActive: true } });
+        await update(ref(db), { [`sessions/${window.currentSession}/participants/${pid}`]: { name, gender: document.querySelector('input[name="newParticipantGender"]:checked').value, weight: weight, isActive: true } });
         document.getElementById('addParticipantSessionModal').classList.add('hidden');
     };
 
@@ -301,7 +350,9 @@ window.initApplication = function() {
         const name = document.getElementById('foodNameInput').value.trim();
         const qty = parseFloat(document.getElementById('foodQuantityInput').value);
         const selectedPids = Array.from(document.querySelectorAll('input[name="foodParticipant"]:checked')).map(cb => cb.value);
-        if (!name || isNaN(qty) || selectedPids.length === 0) return;
+        if (!name || isNaN(qty) || selectedPids.length === 0) return window.showToast('Geçersiz yiyecek, miktar veya kişi seçimi!', 'warning');
+        if (name.length > 30) return window.showToast('Yiyecek adı çok uzun!', 'warning');
+        if (qty <= 0 || qty > 50) return window.showToast('Miktar 0.5 ile 50 arasında olmalı!', 'warning');
         
         const share = qty / selectedPids.length;
         const updates = {};
