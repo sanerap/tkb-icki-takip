@@ -384,9 +384,75 @@ window.initApplication = function() {
     
     window.requestAdminAction = async (action) => {
         const code = prompt('Yönetici Kodu:');
-        if (code !== window.sessionData.adminCode) return alert('Hatalı!');
-        if (action === 'endSession') await remove(ref(db, `sessions/${window.currentSession}`));
-        else if (action === 'clearAll' && confirm('Her şeyi sil?')) await update(ref(db), { [`sessions/${window.currentSession}/drinks`]: null, [`sessions/${window.currentSession}/drinkHistory`]: null });
+        if (code !== window.sessionData.adminCode) return window.showToast('Hatalı kod!', 'error');
+        
+        if (action === 'endSession') {
+            const saveHistory = confirm('Oturumu sonlandırmadan önce:\n\nBu oturumu geçmişe kaydetmek ister misiniz?\n\n• EVET: Favori içki hesaplamasında kullanılacak\n• HAYIR: Tamamen silinecek (test için)');
+            
+            if (saveHistory) {
+                try {
+                    const sessionSummary = {
+                        sessionCode: window.currentSession,
+                        endedAt: Date.now(),
+                        participants: {},
+                        totalDrinks: {}
+                    };
+                    
+                    const participants = window.sessionData.participants || {};
+                    const drinks = window.sessionData.drinks || {};
+                    const drinkHistory = window.sessionData.drinkHistory || {};
+                    
+                    // Generate Session Summary and update Favorites
+                    for (const [pid, participant] of Object.entries(participants)) {
+                        if (!participant.isActive) continue;
+                        
+                        const pDrinks = drinks[pid] || {};
+                        const pHistory = drinkHistory[pid] || [];
+                        
+                        sessionSummary.participants[participant.name] = {
+                            gender: participant.gender,
+                            weight: participant.weight,
+                            drinks: pDrinks,
+                            drinkCount: Object.values(pDrinks).reduce((sum, qty) => sum + qty, 0),
+                            drinkHistory: pHistory
+                        };
+                        
+                        // Aggregate globally for session
+                        Object.entries(pDrinks).forEach(([drinkType, qty]) => {
+                            if (!sessionSummary.totalDrinks[drinkType]) sessionSummary.totalDrinks[drinkType] = 0;
+                            sessionSummary.totalDrinks[drinkType] += qty;
+                        });
+
+                        // Update User Favorites
+                        const userFavRef = ref(db, `userFavorites/${participant.name.toLowerCase()}`);
+                        const favSnapshot = await get(userFavRef);
+                        const currentFav = favSnapshot.val() || { drinks: {} };
+                        
+                        Object.entries(pDrinks).forEach(([drinkType, qty]) => {
+                            if (!currentFav.drinks[drinkType]) currentFav.drinks[drinkType] = 0;
+                            currentFav.drinks[drinkType] += qty;
+                        });
+                        currentFav.lastSession = Date.now();
+                        await set(userFavRef, currentFav);
+                    }
+                    
+                    // Save session to history
+                    const historyId = `hist_${Date.now()}`;
+                    await set(ref(db, `sessionHistory/${historyId}`), sessionSummary);
+                    window.showToast('Oturum geçmişe kaydedildi ve favoriler güncellendi!', 'success');
+                } catch (error) {
+                    console.error('Geçmiş hatası:', error);
+                    window.showToast('Geçmiş kaydedilirken hata oluştu!', 'error');
+                }
+            }
+            
+            if (confirm('Oturumu şimdi sonlandırmak istediğinize emin misiniz?')) {
+                await remove(ref(db, `sessions/${window.currentSession}`));
+            }
+        } 
+        else if (action === 'clearAll' && confirm('Her şeyi sil?')) {
+            await update(ref(db), { [`sessions/${window.currentSession}/drinks`]: null, [`sessions/${window.currentSession}/drinkHistory`]: null });
+        }
     };
 
     window.exportSummaryJPG = () => {
@@ -427,8 +493,41 @@ window.initApplication = function() {
 
 window.openAddDrinkModal = (pid) => {
     window.activeDrinkParticipantId = pid;
-    document.getElementById('addDrinkForName').textContent = window.sessionData.participants[pid].name + " için içki";
+    const participantName = window.sessionData.participants[pid].name;
+    document.getElementById('addDrinkForName').textContent = participantName + " için içki";
+    
+    // Çevrimdışı/Hemen yüklenen varsayılan ekran durumu
+    document.getElementById('drinkTypeInput').value = '';
+    document.getElementById('drinkQuantityInput').value = '1';
+    document.getElementById('selectedIcon').value = '🍹';
+    document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('selected'));
+    
     document.getElementById('addDrinkModal').classList.remove('hidden');
+
+    // Favorileri arka planda çekip UI'a yedir (eğer kullanıcı henüz bir şey yazmadıysa)
+    setTimeout(async () => {
+        try {
+            const userFavRef = ref(window.database, `userFavorites/${participantName.toLowerCase()}`);
+            const favSnapshot = await get(userFavRef);
+            const favData = favSnapshot.val();
+            
+            if (favData && favData.drinks && document.getElementById('drinkTypeInput').value === '') {
+                const sortedDrinks = Object.entries(favData.drinks).sort((a, b) => b[1] - a[1]);
+                if (sortedDrinks.length > 0) {
+                    const favoriteDrink = sortedDrinks[0][0];
+                    document.getElementById('drinkTypeInput').value = favoriteDrink;
+                    
+                    const icon = window.getDrinkIcon(favoriteDrink);
+                    document.getElementById('selectedIcon').value = icon;
+                    document.querySelectorAll('.icon-btn').forEach(b => {
+                        if (b.getAttribute('data-icon') === icon) b.classList.add('selected');
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Favori içki okunamadı:', e);
+        }
+    }, 10);
 };
 
 window.initApplication();
