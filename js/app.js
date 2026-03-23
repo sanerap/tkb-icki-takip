@@ -187,22 +187,27 @@ window.initApplication = function() {
             participants: participants
         };
         
-        await set(ref(db, `sessions/${code}`), session);
-        window.currentSession = code;
-        window.isAdmin = true;
-        window.adminCode = aCode;
-        window.currentParticipantId = adminSelectId;
-        
-        localStorage.setItem('currentSession', code);
-        localStorage.setItem('isAdmin', 'true');
-        localStorage.setItem('adminCode', aCode);
-        localStorage.setItem('currentParticipantId', adminSelectId);
-        
-        // Hide create session modal
-        document.getElementById('createSessionModal')?.classList.add('hidden');
-        window.tempParticipants = [];
-        
-        window.loadSession(code);
+        try {
+            await set(ref(db, `sessions/${code}`), session);
+            window.currentSession = code;
+            window.isAdmin = true;
+            window.adminCode = aCode;
+            window.currentParticipantId = adminSelectId;
+            
+            localStorage.setItem('currentSession', code);
+            localStorage.setItem('isAdmin', 'true');
+            localStorage.setItem('adminCode', aCode);
+            localStorage.setItem('currentParticipantId', adminSelectId);
+            
+            // Hide create session modal
+            document.getElementById('createSessionModal')?.classList.add('hidden');
+            window.tempParticipants = [];
+            
+            window.loadSession(code);
+        } catch (error) {
+            console.error('Session creation error:', error);
+            window.showToast('Veritabanına yazılamadı. Bağlantı / API Kısıtlaması sorunu!', 'error');
+        }
     };
 
     window.joinSessionStep1 = async (code) => {
