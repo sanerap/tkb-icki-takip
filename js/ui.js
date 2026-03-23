@@ -303,7 +303,7 @@ window.renderMainContent = function() {
 
 window.showSessionInfo = function() {
     const sessionInfo = document.getElementById('sessionInfo');
-    const sessionCodeHeader = document.getElementById('sessionCodeHeader');
+    const sessionCodeHeader = document.getElementById('sessionCodeDisplay');
     if (window.currentSession) {
         sessionCodeHeader.textContent = window.currentSession;
         sessionInfo.classList.remove('hidden');
