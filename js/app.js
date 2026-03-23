@@ -342,6 +342,36 @@ window.initApplication = function() {
         window.showToast('JPG modülü yüklendi, indirme başlıyor...', 'info');
         window.print(); 
     };
+
+    window.showQRCode = function() {
+        const qrContainer = document.getElementById('qrCodeContainer');
+        qrContainer.innerHTML = '';
+        const url = `${window.location.origin}${window.location.pathname}?join=${window.currentSession}`;
+        new QRCode(qrContainer, { text: url, width: 200, height: 200 });
+        document.getElementById('qrCodeModal')?.classList.remove('hidden');
+    };
+    
+    window.showAdminCode = function() {
+        document.getElementById('showAdminCodeValue').textContent = window.adminCode;
+        document.getElementById('showAdminCodeModal')?.classList.remove('hidden');
+    };
+
+    window.openAddParticipantModal = function() {
+        document.getElementById('addParticipantSessionModal')?.classList.remove('hidden');
+    };
+
+    window.openAddFoodModal = function() {
+        const list = document.getElementById('foodParticipantsCheckboxes');
+        list.innerHTML = Object.entries(window.sessionData.participants)
+            .filter(([pid, p]) => p.isActive && !p.leftAt)
+            .map(([pid, p]) => `
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" name="foodParticipant" value="${pid}" checked style="width: 18px; height: 18px;">
+                    <span style="color: white;">${p.name}</span>
+                </label>
+            `).join('');
+        document.getElementById('addFoodModal')?.classList.remove('hidden');
+    };
 };
 
 window.openAddDrinkModal = (pid) => {
