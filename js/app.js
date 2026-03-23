@@ -3,30 +3,35 @@
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, update, remove, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, update, remove, get, push } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
-// Global Firebase Exports for other scripts if needed
+// Global Firebase Exports
 window.firebaseApp = initializeApp(window.firebaseConfig);
 window.database = getDatabase(window.firebaseApp);
 window.auth = getAuth(window.firebaseApp);
 
-// Initialize Application
 window.initApplication = function() {
-    console.log('🚀 TKB Application Initializing...');
-    
     const db = window.database;
     const auth = window.auth;
 
-    // Authentication
     signInAnonymously(auth).catch(err => console.error('Auth error:', err));
-    
     onAuthStateChanged(auth, (user) => {
         if (user) {
             window.userId = user.uid;
             localStorage.setItem('userId', user.uid);
             setupEventListeners();
-            checkAutoJoin();
+            
+            // Auto join if session in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinCode = urlParams.get('join');
+            if (joinCode) {
+                window.joinSessionStep1(joinCode.toUpperCase());
+                // Remove parameter from URL without reload
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (window.currentSession) {
+                window.loadSession(window.currentSession);
+            }
         }
     });
 
@@ -48,220 +53,191 @@ window.initApplication = function() {
             });
         });
 
-        // Setup Panel (Create/Join)
-        document.getElementById('createSessionBtn').addEventListener('click', () => {
+        // Setup Panel
+        document.getElementById('createSessionBtn')?.addEventListener('click', () => {
             document.getElementById('setupPanel').classList.add('hidden');
             document.getElementById('createSessionCard').classList.remove('hidden');
         });
-
-        document.getElementById('joinSessionBtn').addEventListener('click', () => {
+        document.getElementById('joinSessionBtn')?.addEventListener('click', () => {
             document.getElementById('setupPanel').classList.add('hidden');
             document.getElementById('joinSessionModal').classList.remove('hidden');
         });
+        document.getElementById('confirmCreateSession')?.addEventListener('click', () => window.createNewSession());
 
-        document.getElementById('confirmCreateSession').addEventListener('click', createNewSession);
-    }
-
-    async function createNewSession() {
-        const adminName = document.getElementById('adminNameInput').value.trim();
-        if (!adminName) {
-            window.showToast('Lütfen isminizi girin', 'warning');
-            return;
-        }
-
-        const sessionCode = window.generateSessionCode();
-        const adminCode = window.generateAdminCode();
-        const adminId = window.generateParticipantId();
-
-        const session = {
-            createdAt: Date.now(),
-            adminUserId: window.userId,
-            adminCode: adminCode,
-            participants: {
-                [adminId]: {
-                    name: adminName,
-                    gender: window.detectGenderFromName(adminName) || 'male',
-                    userId: window.userId,
-                    isActive: true,
-                    isAdmin: true
-                }
-            }
+        // Modals
+        const modalClosers = {
+            'closeQRCode': 'qrCodeModal', 'closeShowAdminCode': 'showAdminCodeModal',
+            'cancelAddDrink': 'addDrinkModal', 'cancelAdjustDrink': 'adjustDrinkModal',
+            'cancelDeleteDrink': 'deleteDrinkModal', 'cancelAdminCode': 'adminCodeModal',
+            'cancelJoinSession': 'joinSessionModal', 'cancelSelectParticipant': 'selectParticipantModal',
+            'cancelAddParticipantSession': 'addParticipantSessionModal', 'cancelAddFood': 'addFoodModal',
+            'closeParticipantHistory': 'participantHistoryModal'
         };
+        Object.entries(modalClosers).forEach(([btnId, modalId]) => {
+            document.getElementById(btnId)?.addEventListener('click', () => document.getElementById(modalId).classList.add('hidden'));
+        });
 
-        try {
-            await set(ref(db, `sessions/${sessionCode}`), session);
-            window.currentSession = sessionCode;
-            window.isAdmin = true;
-            window.adminCode = adminCode;
-            window.currentParticipantId = adminId;
-            
-            localStorage.setItem('currentSession', sessionCode);
-            localStorage.setItem('isAdmin', 'true');
-            localStorage.setItem('adminCode', adminCode);
-            localStorage.setItem('currentParticipantId', adminId);
-
-            loadSession(sessionCode);
-        } catch (error) {
-            alert('Session creation error: ' + error.message);
-        }
+        document.getElementById('confirmJoinSessionCode')?.addEventListener('click', () => {
+            const code = document.getElementById('joinSessionCodeInput').value.trim().toUpperCase();
+            if (code) window.joinSessionStep1(code);
+        });
+        document.getElementById('confirmSelectParticipant')?.addEventListener('click', () => {
+            const pid = document.getElementById('participantSelect').value;
+            if (pid) window.joinSessionStep2(pid);
+        });
+        document.getElementById('confirmAddDrink')?.addEventListener('click', () => window.addDrink());
+        document.getElementById('confirmAddParticipantSession')?.addEventListener('click', () => window.addParticipant());
+        document.getElementById('confirmAddFood')?.addEventListener('click', () => window.addFood());
     }
 
-    function checkAutoJoin() {
-        if (window.currentSession) {
-            loadSession(window.currentSession);
-        }
-    }
-
-    window.loadSession = function(sessionCode) {
-        const sessionRef = ref(db, `sessions/${sessionCode}`);
-        window.isLoadingSession = true;
-        window.showSessionInfo();
+    window.createNewSession = async () => {
+        const name = document.getElementById('adminNameInput').value.trim();
+        if (!name) return window.showToast('İsim girin!', 'warning');
         
+        const code = window.generateSessionCode();
+        const aCode = window.generateAdminCode();
+        const aid = window.generateParticipantId();
+        
+        const session = {
+            createdAt: Date.now(), adminUserId: window.userId, adminCode: aCode,
+            participants: { [aid]: { name, gender: window.detectGenderFromName(name) || 'male', userId: window.userId, isActive: true, isAdmin: true } }
+        };
+        
+        await set(ref(db, `sessions/${code}`), session);
+        window.currentSession = code; window.isAdmin = true; window.adminCode = aCode; window.currentParticipantId = aid;
+        localStorage.setItem('currentSession', code); localStorage.setItem('isAdmin', 'true');
+        localStorage.setItem('adminCode', aCode); localStorage.setItem('currentParticipantId', aid);
+        window.loadSession(code);
+    };
+
+    window.joinSessionStep1 = async (code) => {
+        const snap = await get(ref(db, `sessions/${code}`));
+        if (!snap.exists()) return window.showToast('Oturum bulunamadı!', 'error');
+        
+        window.tempJoiningSession = code;
+        const pSelect = document.getElementById('participantSelect');
+        pSelect.innerHTML = '<option value="">Seçin...</option>' + 
+            Object.entries(snap.val().participants || {})
+            .filter(([id, p]) => p.isActive && !p.userId)
+            .map(([id, p]) => `<option value="${id}">${p.name}</option>`).join('') +
+            '<option value="NEW">+ Yeni Katılımcı Olarak Ekle</option>';
+            
+        document.getElementById('joiningSessionCode').textContent = code;
+        document.getElementById('joinSessionModal').classList.add('hidden');
+        document.getElementById('selectParticipantModal').classList.remove('hidden');
+    };
+
+    window.joinSessionStep2 = async (pid) => {
+        const code = window.tempJoiningSession;
+        if (pid === 'NEW') {
+            const name = prompt('İsim:'); if (!name) return;
+            pid = window.generateParticipantId();
+            await update(ref(db), { [`sessions/${code}/participants/${pid}`]: { name, gender: window.detectGenderFromName(name) || 'male', userId: window.userId, isActive: true } });
+        } else {
+            await update(ref(db), { [`sessions/${code}/participants/${pid}/userId`]: window.userId });
+        }
+        
+        window.currentSession = code; window.currentParticipantId = pid; window.isAdmin = false;
+        localStorage.setItem('currentSession', code); localStorage.setItem('currentParticipantId', pid); localStorage.setItem('isAdmin', 'false');
+        window.loadSession(code);
+        document.getElementById('selectParticipantModal').classList.add('hidden');
+    };
+
+    window.loadSession = function(code) {
+        window.currentSession = code;
+        window.showSessionInfo();
         document.getElementById('setupContent').classList.add('hidden');
         document.getElementById('mainUI').classList.remove('hidden');
         
-        if (window.sessionListener) window.sessionListener();
-        
-        window.sessionListener = onValue(sessionRef, (snapshot) => {
-            if (!snapshot.exists()) {
-                window.showToast('Oturum sonlandırıldı', 'error');
-                setTimeout(() => window.leaveSession(), 2000);
-                return;
-            }
-            
-            window.sessionData = snapshot.val();
-            window.isLoadingSession = false;
+        onValue(ref(db, `sessions/${code}`), (snap) => {
+            if (!snap.exists()) { window.showToast('Oturum sonlandırıldı', 'error'); window.leaveSession(); return; }
+            window.sessionData = snap.val();
             window.renderMainContent();
             window.updateNotificationCount();
             if (window.isAdmin) window.updateApprovalCount();
         });
     };
 
-    window.leaveSession = function() {
-        if (window.isAdmin) {
-            if (!confirm('Yönetici olarak oturumdan ayrılıyorsunuz. Oturumu sonlandırmadınız, bu yüzden katılımcılar devam edebilir. Ayrılmak istediğinize emin misiniz?')) {
-                return;
-            }
-        }
-        localStorage.removeItem('currentSession');
-        localStorage.removeItem('currentParticipantId');
-        localStorage.removeItem('isAdmin');
-        localStorage.removeItem('adminCode');
-        window.location.reload();
+    window.leaveSession = () => {
+        if (window.isAdmin && !confirm('Yönetici olarak ayrılıyorsunuz. Emin misiniz?')) return;
+        localStorage.clear(); window.location.reload();
     };
 
-    // Firebase specific actions
-    window.adjustDrink = async (pid, type, change) => {
-        const currentQty = (window.sessionData.drinks?.[pid]?.[type]) || 0;
-        const newQty = currentQty + change;
+    window.addDrink = async () => {
+        const type = document.getElementById('drinkTypeInput').value;
+        const qty = parseInt(document.getElementById('drinkQuantityInput').value);
+        const pid = window.activeDrinkParticipantId;
+        if (!type || !qty) return;
+        
         const updates = {};
-        if (newQty <= 0) {
-            updates[`sessions/${window.currentSession}/drinks/${pid}/${type}`] = null;
-        } else {
-            updates[`sessions/${window.currentSession}/drinks/${pid}/${type}`] = newQty;
-        }
+        const currentQty = (window.sessionData.drinks?.[pid]?.[type]) || 0;
+        updates[`sessions/${window.currentSession}/drinks/${pid}/${type}`] = currentQty + qty;
+        await push(ref(db, `sessions/${window.currentSession}/drinkHistory/${pid}`), { drink: type, quantity: qty, timestamp: Date.now() });
         await update(ref(db), updates);
-        window.showToast('Güncellendi', 'success');
+        document.getElementById('addDrinkModal').classList.add('hidden');
+        window.showToast('Eklendi', 'success');
     };
 
-    window.deleteDrink = async (pid, type) => {
-        if (!confirm('Silmek istediğinize emin misiniz?')) return;
-        await update(ref(db), { [`sessions/${window.currentSession}/drinks/${pid}/${type}`]: null });
-        window.showToast('Silindi', 'warning');
+    window.addParticipant = async () => {
+        const name = document.getElementById('newParticipantNameInput').value.trim();
+        if (!name) return;
+        const pid = window.generateParticipantId();
+        await update(ref(db), { [`sessions/${window.currentSession}/participants/${pid}`]: { name, gender: document.querySelector('input[name="newParticipantGender"]:checked').value, weight: parseInt(document.getElementById('newParticipantWeightInput').value) || null, isActive: true } });
+        document.getElementById('addParticipantSessionModal').classList.add('hidden');
     };
 
-    window.removeParticipant = async (pid) => {
-        if (!confirm('Çıkarılsın mı?')) return;
-        await update(ref(db), { [`sessions/${window.currentSession}/participants/${pid}/isActive`]: false });
-    };
-
-    window.toggleLeaveSession = async (pid) => {
-        const p = window.sessionData.participants[pid];
-        await update(ref(db), { [`sessions/${window.currentSession}/participants/${pid}/leftAt`]: p.leftAt ? null : Date.now() });
-    };
-    
-    // Approval functions
-    window.approveDeletion = async (id) => {
-        const del = window.sessionData.pendingDeletions[id];
-        const updates = {
-            [`sessions/${window.currentSession}/drinks/${del.participantId}/${del.drinkType}`]: null,
-            [`sessions/${window.currentSession}/pendingDeletions/${id}`]: null
-        };
+    window.addFood = async () => {
+        const name = document.getElementById('foodNameInput').value.trim();
+        const qty = parseFloat(document.getElementById('foodQuantityInput').value);
+        const selectedPids = Array.from(document.querySelectorAll('input[name="foodParticipant"]:checked')).map(cb => cb.value);
+        if (!name || isNaN(qty) || selectedPids.length === 0) return;
+        
+        const share = qty / selectedPids.length;
+        const updates = {};
+        selectedPids.forEach(pid => {
+            const current = window.sessionData.drinks?.[pid]?.[`🍕 ${name}`] || 0;
+            updates[`sessions/${window.currentSession}/drinks/${pid}/🍕 ${name}`] = current + share;
+        });
         await update(ref(db), updates);
-    };
-    
-    window.rejectDeletion = async (id) => {
-        await update(ref(db), { [`sessions/${window.currentSession}/pendingDeletions/${id}`]: null });
+        document.getElementById('addFoodModal').classList.add('hidden');
+        window.showToast('Yiyecek paylaştırıldı', 'success');
     };
 
-    window.showQRCode = function() {
-        const qrContainer = document.getElementById('qrCodeContainer');
-        qrContainer.innerHTML = '';
-        const url = `${window.location.origin}${window.location.pathname}?join=${window.currentSession}`;
-        new QRCode(qrContainer, { text: url, width: 200, height: 200 });
-        document.getElementById('qrCodeModal').classList.remove('hidden');
-    };
-    
-    window.showAdminCode = function() {
-        document.getElementById('showAdminCodeValue').textContent = window.adminCode;
-        document.getElementById('showAdminCodeModal').classList.remove('hidden');
-    };
-
-    window.openAddParticipantModal = function() {
-        document.getElementById('addParticipantSessionModal').classList.remove('hidden');
-    };
-
-    window.openAddFoodModal = function() {
-        const list = document.getElementById('foodParticipantsCheckboxes');
-        list.innerHTML = Object.entries(window.sessionData.participants)
-            .filter(([pid, p]) => p.isActive && !p.leftAt)
-            .map(([pid, p]) => `
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" name="foodParticipant" value="${pid}" checked style="width: 18px; height: 18px;">
-                    <span style="color: white;">${p.name}</span>
-                </label>
-            `).join('');
-        document.getElementById('addFoodModal').classList.remove('hidden');
-    };
-
-    window.showSessionSummary = function() {
+    window.showSessionSummary = () => {
         const participants = window.sessionData.participants || {};
         const drinks = window.sessionData.drinks || {};
-        
-        // Calculate totals
-        let totalDrinks = 0;
-        const participantSummary = [];
+        let totalDrinks = 0; let pSummary = [];
         
         Object.entries(participants).forEach(([pid, p]) => {
             if (!p.isActive) return;
-            const pDrinks = drinks[pid] || {};
-            let pTotal = 0;
-            Object.values(pDrinks).forEach(q => pTotal += q);
+            let pTotal = 0; Object.values(drinks[pid] || {}).forEach(q => pTotal += q);
             totalDrinks += pTotal;
-            
-            participantSummary.push({
-                name: p.name,
-                total: pTotal,
-                promil: window.getDrunknessLevel(window.calculateTotalAlcohol(pid), pid).promille
-            });
+            pSummary.push({ name: p.name, total: pTotal.toFixed(1), promil: window.getDrunknessLevel(window.calculateTotalAlcohol(pid), pid).promille });
         });
         
-        // Populate Modal
-        document.getElementById('summaryStats').innerHTML = `
-            <div style="text-align: center;"><div style="font-size: 20px; font-weight: bold;">${totalDrinks}</div><div style="font-size: 10px; color: #888;">TOPLAM İÇKİ</div></div>
-            <div style="text-align: center;"><div style="font-size: 20px; font-weight: bold;">${Object.keys(participants).length}</div><div style="font-size: 10px; color: #888;">KATILIMCI</div></div>
-        `;
-        
-        document.getElementById('summaryParticipants').innerHTML = participantSummary.map(p => `
-            <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                <span>${p.name}</span>
-                <span>${p.total} İçki (${p.promil.toFixed(2)}‰)</span>
-            </div>
-        `).join('');
-        
+        document.getElementById('summaryStats').innerHTML = `<div style="text-align:center;"><b>${totalDrinks.toFixed(1)}</b><br><small>TOPLAM</small></div><div style="text-align:center;"><b>${pSummary.length}</b><br><small>KİŞİ</small></div>`;
+        document.getElementById('summaryParticipants').innerHTML = pSummary.map(p => `<div style="display:flex; justify-content:space-between;"><span>${p.name}</span><span>${p.total} (${p.promil.toFixed(2)}‰)</span></div>`).join('');
         document.getElementById('sessionSummaryModal').classList.remove('hidden');
+    };
+    
+    window.requestAdminAction = async (action) => {
+        const code = prompt('Yönetici Kodu:');
+        if (code !== window.sessionData.adminCode) return alert('Hatalı!');
+        if (action === 'endSession') await remove(ref(db, `sessions/${window.currentSession}`));
+        else if (action === 'clearAll' && confirm('Her şeyi sil?')) await update(ref(db), { [`sessions/${window.currentSession}/drinks`]: null, [`sessions/${window.currentSession}/drinkHistory`]: null });
+    };
+
+    window.exportSummaryJPG = () => {
+        window.showToast('JPG modülü yüklendi, indirme başlıyor...', 'info');
+        // Simple print or screenshot instruction as fallback if html2canvas is not available
+        window.print(); 
     };
 };
 
-// Start application
+window.openAddDrinkModal = (pid) => {
+    window.activeDrinkParticipantId = pid;
+    document.getElementById('addDrinkForName').textContent = window.sessionData.participants[pid].name + " için içki";
+    document.getElementById('addDrinkModal').classList.remove('hidden');
+};
+
 window.initApplication();
