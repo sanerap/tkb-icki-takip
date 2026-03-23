@@ -244,12 +244,23 @@ window.initApplication = function() {
         document.getElementById('sessionManagement')?.classList.add('hidden');
         document.getElementById('tabNavigation')?.classList.remove('hidden');
         
+        window.isLoadingSession = true;
+        window.renderMainContent(); // Show the loading UI immediately
+        
         onValue(ref(db, `sessions/${code}`), (snap) => {
+            window.isLoadingSession = false;
             if (!snap.exists()) { window.showToast('Oturum sonlandırıldı', 'error'); window.leaveSession(); return; }
             window.sessionData = snap.val();
             window.renderMainContent();
             window.updateNotificationCount();
             if (window.isAdmin) window.updateApprovalCount();
+        }, (error) => {
+            console.error('Firebase DB Error:', error);
+            window.showToast('Veritabanına bağlanılamadı. API anahtarı veya yetki hatası!', 'error');
+            // Revert UI partially to allow retry
+            window.isLoadingSession = false;
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) mainContent.innerHTML = `<div class="empty-state">Bağlantı hatası: ${error.message}</div>`;
         });
     };
 
