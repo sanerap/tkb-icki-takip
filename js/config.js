@@ -4,7 +4,7 @@
 
 // Firebase configuration
 window.firebaseConfig = {
-    apiKey: "AIzaSyBMVTZBMXjBDT45foOQPGCnL5xNRqWNEkw",
+    apiKey: "AIzaSyCsBF5EkfzM-TomAcjN-vKbAAeUu8on4_U",
     authDomain: "drink-tracker-b7bc1.firebaseapp.com",
     databaseURL: "https://drink-tracker-b7bc1-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "drink-tracker-b7bc1",

@@ -44,7 +44,7 @@ window.initApplication = function() {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-                document.getElementById(`${tab}Tab`).classList.remove('hidden');
+                document.getElementById(`${tab}Tab`)?.classList.remove('hidden');
                 
                 if (tab === 'notifications') window.renderNotifications();
                 if (tab === 'approvals') window.renderApprovals();
@@ -53,13 +53,14 @@ window.initApplication = function() {
             });
         });
 
-        // Setup Panel
+        // Setup Panel (Create/Join)
         document.getElementById('createSessionBtn')?.addEventListener('click', () => {
-            document.getElementById('setupPanel').classList.add('hidden');
-            document.getElementById('createSessionCard').classList.remove('hidden');
+            document.getElementById('sessionManagement').classList.add('hidden');
+            document.getElementById('createSessionModal').classList.remove('hidden');
         });
+
         document.getElementById('joinSessionBtn')?.addEventListener('click', () => {
-            document.getElementById('setupPanel').classList.add('hidden');
+            document.getElementById('sessionManagement').classList.add('hidden');
             document.getElementById('joinSessionModal').classList.remove('hidden');
         });
         document.getElementById('confirmCreateSession')?.addEventListener('click', () => window.createNewSession());
@@ -91,8 +92,13 @@ window.initApplication = function() {
     }
 
     window.createNewSession = async () => {
-        const name = document.getElementById('adminNameInput').value.trim();
-        if (!name) return window.showToast('İsim girin!', 'warning');
+        const name = document.getElementById('adminNameInput')?.value.trim();
+        if (!name) {
+            // Because adminNameInput does not exist we must find the participantNameInput 
+            const pName = document.getElementById('participantNameInput')?.value.trim();
+            if (!pName) return window.showToast('İsim girin!', 'warning');
+        }
+        const finalName = document.getElementById('adminNameInput')?.value.trim() || document.getElementById('participantNameInput')?.value.trim();
         
         const code = window.generateSessionCode();
         const aCode = window.generateAdminCode();
@@ -100,13 +106,17 @@ window.initApplication = function() {
         
         const session = {
             createdAt: Date.now(), adminUserId: window.userId, adminCode: aCode,
-            participants: { [aid]: { name, gender: window.detectGenderFromName(name) || 'male', userId: window.userId, isActive: true, isAdmin: true } }
+            participants: { [aid]: { name: finalName, gender: window.detectGenderFromName(finalName) || 'male', userId: window.userId, isActive: true, isAdmin: true } }
         };
         
         await set(ref(db, `sessions/${code}`), session);
         window.currentSession = code; window.isAdmin = true; window.adminCode = aCode; window.currentParticipantId = aid;
         localStorage.setItem('currentSession', code); localStorage.setItem('isAdmin', 'true');
         localStorage.setItem('adminCode', aCode); localStorage.setItem('currentParticipantId', aid);
+        
+        // Hide create session modal
+        document.getElementById('createSessionModal')?.classList.add('hidden');
+        
         window.loadSession(code);
     };
 
@@ -146,8 +156,8 @@ window.initApplication = function() {
     window.loadSession = function(code) {
         window.currentSession = code;
         window.showSessionInfo();
-        document.getElementById('setupContent').classList.add('hidden');
-        document.getElementById('mainUI').classList.remove('hidden');
+        document.getElementById('sessionManagement')?.classList.add('hidden');
+        document.getElementById('tabNavigation')?.classList.remove('hidden');
         
         onValue(ref(db, `sessions/${code}`), (snap) => {
             if (!snap.exists()) { window.showToast('Oturum sonlandırıldı', 'error'); window.leaveSession(); return; }
@@ -229,7 +239,6 @@ window.initApplication = function() {
 
     window.exportSummaryJPG = () => {
         window.showToast('JPG modülü yüklendi, indirme başlıyor...', 'info');
-        // Simple print or screenshot instruction as fallback if html2canvas is not available
         window.print(); 
     };
 };
