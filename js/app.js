@@ -57,6 +57,34 @@ window.initApplication = function() {
         document.getElementById('createSessionBtn')?.addEventListener('click', () => {
             document.getElementById('sessionManagement').classList.add('hidden');
             document.getElementById('createSessionModal').classList.remove('hidden');
+            window.tempParticipants = [];
+            if (window.renderTempParticipants) window.renderTempParticipants();
+        });
+
+        document.getElementById('cancelCreateSession')?.addEventListener('click', () => {
+            document.getElementById('createSessionModal').classList.add('hidden');
+            document.getElementById('sessionManagement').classList.remove('hidden');
+            window.tempParticipants = [];
+            if (window.renderTempParticipants) window.renderTempParticipants();
+        });
+
+        document.getElementById('addParticipantBtn')?.addEventListener('click', () => {
+            const nameInput = document.getElementById('participantNameInput');
+            const name = nameInput.value.trim();
+            const gender = document.querySelector('input[name="participantGender"]:checked')?.value || 'male';
+            const weight = parseInt(document.getElementById('participantWeightInput').value) || null;
+            
+            if (!name) return window.showToast('Lütfen isim girin!', 'warning');
+            
+            window.tempParticipants = window.tempParticipants || [];
+            window.tempParticipants.push({
+                id: window.generateParticipantId(),
+                name, gender, weight
+            });
+            
+            nameInput.value = '';
+            document.getElementById('participantWeightInput').value = '';
+            if (window.renderTempParticipants) window.renderTempParticipants();
         });
 
         document.getElementById('joinSessionBtn')?.addEventListener('click', () => {
@@ -91,31 +119,88 @@ window.initApplication = function() {
         document.getElementById('confirmAddFood')?.addEventListener('click', () => window.addFood());
     }
 
-    window.createNewSession = async () => {
-        const name = document.getElementById('adminNameInput')?.value.trim();
-        if (!name) {
-            // Because adminNameInput does not exist we must find the participantNameInput 
-            const pName = document.getElementById('participantNameInput')?.value.trim();
-            if (!pName) return window.showToast('İsim girin!', 'warning');
+    // Session Creation State
+    window.tempParticipants = [];
+
+    window.renderTempParticipants = function() {
+        const list = document.getElementById('participantList');
+        const btn = document.getElementById('confirmCreateSession');
+        const adminGroup = document.getElementById('adminSelfSelectGroup');
+        const adminSelect = document.getElementById('adminSelfSelect');
+        
+        if (!window.tempParticipants || window.tempParticipants.length === 0) {
+            list.innerHTML = '<div class="empty-state" style="padding: 20px;">Henüz katılımcı eklenmedi</div>';
+            btn.textContent = 'Oturumu Başlat (0 kişi)';
+            adminGroup.style.display = 'none';
+        } else {
+            list.innerHTML = window.tempParticipants.map((p, index) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px; background: #1a2332; border-radius: 8px; margin-bottom: 5px;">
+                    <div><span style="font-size: 16px;">${p.gender === 'female' ? '♀️' : '♂️'}</span> <strong style="color: #e0e0e0; margin-left: 5px;">${p.name}</strong> ${p.weight ? `<span style="color:#888; font-size: 12px; margin-left:5px;">(${p.weight}kg)</span>` : ''}</div>
+                    <button class="btn-icon" onclick="window.removeTempParticipant(${index})" style="color:#dc3545; background:rgba(220,53,69,0.1); padding: 5px 10px; border-radius: 4px;">✕</button>
+                </div>
+            `).join('');
+            
+            btn.textContent = `Oturumu Başlat (${window.tempParticipants.length} kişi)`;
+            adminGroup.style.display = 'block';
+            
+            // Preserve selection if possible
+            const currentSelection = adminSelect.value;
+            adminSelect.innerHTML = '<option value="">Seçiniz...</option>' + 
+                window.tempParticipants.map(p => `<option value="${p.id}" ${currentSelection === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
         }
-        const finalName = document.getElementById('adminNameInput')?.value.trim() || document.getElementById('participantNameInput')?.value.trim();
+    };
+
+    window.removeTempParticipant = function(index) {
+        window.tempParticipants.splice(index, 1);
+        window.renderTempParticipants();
+    };
+
+    window.createNewSession = async () => {
+        if (!window.tempParticipants || window.tempParticipants.length === 0) {
+            return window.showToast('En az 1 kişi eklemelisiniz!', 'error');
+        }
+        
+        const adminSelectId = document.getElementById('adminSelfSelect').value;
+        if (!adminSelectId) {
+            return window.showToast('Lütfen listeden kendinizi (Kurucu) seçiniz!', 'warning');
+        }
         
         const code = window.generateSessionCode();
         const aCode = window.generateAdminCode();
-        const aid = window.generateParticipantId();
+        
+        const participants = {};
+        window.tempParticipants.forEach(p => {
+            participants[p.id] = {
+                name: p.name,
+                gender: p.gender,
+                weight: p.weight,
+                isActive: true,
+                isAdmin: p.id === adminSelectId,
+                userId: p.id === adminSelectId ? window.userId : null
+            };
+        });
         
         const session = {
-            createdAt: Date.now(), adminUserId: window.userId, adminCode: aCode,
-            participants: { [aid]: { name: finalName, gender: window.detectGenderFromName(finalName) || 'male', userId: window.userId, isActive: true, isAdmin: true } }
+            createdAt: Date.now(),
+            adminUserId: window.userId,
+            adminCode: aCode,
+            participants: participants
         };
         
         await set(ref(db, `sessions/${code}`), session);
-        window.currentSession = code; window.isAdmin = true; window.adminCode = aCode; window.currentParticipantId = aid;
-        localStorage.setItem('currentSession', code); localStorage.setItem('isAdmin', 'true');
-        localStorage.setItem('adminCode', aCode); localStorage.setItem('currentParticipantId', aid);
+        window.currentSession = code;
+        window.isAdmin = true;
+        window.adminCode = aCode;
+        window.currentParticipantId = adminSelectId;
+        
+        localStorage.setItem('currentSession', code);
+        localStorage.setItem('isAdmin', 'true');
+        localStorage.setItem('adminCode', aCode);
+        localStorage.setItem('currentParticipantId', adminSelectId);
         
         // Hide create session modal
         document.getElementById('createSessionModal')?.classList.add('hidden');
+        window.tempParticipants = [];
         
         window.loadSession(code);
     };
