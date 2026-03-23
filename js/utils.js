@@ -1,5 +1,5 @@
 /**
- * Utility functions for TKB İçki Takibi
+ * Utility functions for İçki Takip
  */
 
 // Get participant color based on index

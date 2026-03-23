@@ -1,5 +1,5 @@
 /**
- * UI Rendering and Modal functions for TKB İçki Takibi
+ * UI Rendering and Modal functions for İçki Takip
  */
 
 // Toast notification

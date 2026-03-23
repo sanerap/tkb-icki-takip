@@ -1,5 +1,5 @@
 /**
- * Main Application Logic for TKB İçki Takibi
+ * Main Application Logic for İçki Takip
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";

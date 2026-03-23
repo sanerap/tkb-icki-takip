@@ -1,6 +1,6 @@
-# TKB İçki Takibi
+# İçki Takip
 
-**TKB İçki Takibi**, arkadaş grupları, partiler veya etkinlikler için tasarlanmış, gerçek zamanlı ve etkileşimli bir içecek (içki vb.) takip ve istatistik uygulamasıdır. 
+**İçki Takip**, arkadaş grupları, partiler veya etkinlikler için tasarlanmış, gerçek zamanlı ve etkileşimli bir içecek (içki vb.) takip ve istatistik uygulamasıdır. 
 
 Bu web uygulaması, bir buluşma sırasında kimin, ne kadar ve ne tür içeçek tükettiğini düzenli ve eğlenceli bir şekilde kayıt altına almanızı sağlar. "Oda (Session)" tabanlı yapısı sayesinde, tüm arkadaşlarınız aynı oturuma bağlanarak tüketim istatistiklerini anlık (canlı) olarak ortak bir ekranda görebilir.
 
